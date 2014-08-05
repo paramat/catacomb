@@ -1,12 +1,19 @@
--- catacomb 0.1.0 by paramat
+-- catacomb 0.1.1 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
 
 -- Parameters
 
-local MINLEN = 3 -- Min/max length for passages
+local CHCHA = 0.5 -- Adjacent chambers chance
+
+local MINLEN = 3 -- Min max length for passages
 local MAXLEN = 32
+
+local MINWID = 8 -- Min max EW NS widths, min max height, for chambers
+local MAXWID = 32
+local MINHEI = 5
+local MAXHEI = 32
 
 -- Nodes
 
@@ -89,6 +96,7 @@ minetest.register_abm({
 		local c_air = minetest.get_content_id("air")
 		local c_ignore = minetest.get_content_id("ignore")
 		local c_cobble = minetest.get_content_id("default:cobble")
+		local c_chn = minetest.get_content_id("catacomb:chn")
 		local dlu = math.random(-1, 1)
 		local len = math.random(MINLEN, MAXLEN)
 		local vmvd, vmvu -- voxelmanip volume down, up
@@ -148,17 +156,113 @@ minetest.register_abm({
 				for i = 1, 4 do
 					local nodid = data[vi]
 					if nodid ~= c_air then
-						if j == 1 or j == 5 or i == 1 or i == 4 then
-							data[vi] = c_cobble
-						else
-							data[vi] = c_air
+						if k == len then -- passage end wall with chamber spawner
+							if j == 1 and i == 1 then
+								data[vi] = c_chn
+							else
+								data[vi] = c_cobble
+							end
+						else -- passage
+							if j == 1 or j == 5 or i == 1 or i == 4 then
+								data[vi] = c_cobble
+							else
+								data[vi] = c_air
+							end
 						end
 					end
-					vi = vi + 1
+					vi = vi + 1 -- eastwards 1
 				end
-				vi = vi - 4 + vvii
+				vi = vi - 4 + vvii -- back 4, up 1
 			end
-			vi = vi + (dlu - 5) * vvii + nvii
+			vi = vi + (dlu - 5) * vvii + nvii -- down 4 or 5 or 6, northwards 1
+		end
+
+		vm:set_data(data)
+		vm:write_to_map()
+		vm:update_map()
+	end,
+})
+
+-- Chamber north
+
+minetest.register_abm({
+	nodenames = {"catacomb:chn"},
+	interval = 11,
+	chance = 1,
+	action = function(pos, node)
+		local x = pos.x
+		local y = pos.y
+		local z = pos.z
+		local c_air = minetest.get_content_id("air")
+		local c_ignore = minetest.get_content_id("ignore")
+		local c_cobble = minetest.get_content_id("default:cobble")
+		local c_pan = minetest.get_content_id("catacomb:pan")
+		local c_chn = minetest.get_content_id("catacomb:chn")
+		local widew = math.random(MINWID, MAXWID) - 1
+		local vmvw = -math.random(0, widew - 3)
+		local vmve = widew + vmvw
+		local vmvn = math.random(MINWID, MAXWID) - 1
+		local vmvu = math.random(MINHEI, MAXHEI) - 1
+		local exoff = math.random(0, widew - 3) -- exit offset
+
+		local vm = minetest.get_voxel_manip() -- check for obstruction
+		local pos1 = {x=x+vmvw, y=y, z=z}
+		local pos2 = {x=x+vmve, y=y+vmvu, z=z+vmvn}
+		local emin, emax = vm:read_from_map(pos1, pos2)
+		local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
+		local data = vm:get_data()
+
+		for k = 1, vmvn do
+		for j = 0, vmvu do
+			local vi = area:index(x+vmvw, y + j, z + k)
+			for i = 0, widew do
+				local nodid = data[vi]
+				if nodid == c_cobble then
+					local vi = area:index(x, y, z)
+					data[vi] = c_cobble -- replace spawner
+
+					vm:set_data(data)
+					vm:write_to_map()
+					vm:update_map()
+					return
+				end
+				vi = vi + 1
+			end
+		end
+		end
+
+		local vm = minetest.get_voxel_manip() -- spawn chamber
+		local pos1 = {x=x+vmvw, y=y, z=z}
+		local pos2 = {x=x+vmve, y=y+vmvu, z=z+vmvn}
+		local emin, emax = vm:read_from_map(pos1, pos2)
+		local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
+		local data = vm:get_data()
+
+		for k = 0, vmvn do
+		for j = 0, vmvu do
+			local vi = area:index(x+vmvw, y + j, z + k)
+			for i = 0, widew do
+				local nodid = data[vi]
+				if nodid ~= c_air then
+					if k == vmvn and j == 0 and i == exoff then
+						if math.random() < CHCHA then
+							data[vi] = c_chn -- adjacent chamber
+						else
+							data[vi] = c_pan -- passage
+						end
+					elseif (k >= 1 and k <= vmvn - 1
+					and j >= 1 and j <= vmvu - 1
+					and i >= 1 and i <= widew - 1)
+					or (k == 0 and j >= 1 and j <= 3 and i >= 1 - vmvw
+					and i <= 2 - vmvw) then
+						data[vi] = c_air
+					else
+						data[vi] = c_cobble
+					end
+				end
+				vi = vi + 1
+			end
+		end
 		end
 
 		vm:set_data(data)
