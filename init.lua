@@ -1,24 +1,19 @@
--- catacomb 0.1.2 by paramat
+-- catacomb 0.1.3 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
 
--- passages: no obstruction check, connect to default dungeons
--- remove duplicated voxelmanip code
--- mod cobble: chambers merge with default dungeons
--- no mod cobble spawned in leaves
+-- higher passages, stairs
 
 -- Parameters
 
-local CHCHA = 0.5 -- Adjacent chambers chance
-
-local MINLEN = 2 -- Min max length for passages
-local MAXLEN = 24
+local MINLEN = 3 -- Min max length for passages
+local MAXLEN = 32
 
 local MINWID = 8 -- Min max EW NS widths, min max height, for chambers
-local MAXWID = 24
-local MINHEI = 5
-local MAXHEI = 24
+local MAXWID = 32
+local MINHEI = 6
+local MAXHEI = 32
 
 -- Nodes
 
@@ -28,6 +23,70 @@ minetest.register_node("catacomb:cobble", {
 	is_ground_content = false,
 	groups = {cracky=3, stone=2},
 	drop = "default:cobble",
+	sounds = default.node_sound_stone_defaults(),
+})
+
+minetest.register_node("catacomb:stairn", {
+	description = "Stair north",
+	tiles = {"default_cobble.png"},
+	drawtype = "nodebox",
+	paramtype = "light",
+	groups = {cracky=3, stone=2},
+	node_box = {
+		type = "fixed",
+		fixed = {
+			{-0.5, -0.5, -0.5, 0.5, 0, 0.5},
+			{-0.5, 0, 0, 0.5, 0.5, 0.5},
+		},
+	},
+	sounds = default.node_sound_stone_defaults(),
+})
+
+minetest.register_node("catacomb:stairs", {
+	description = "Stair south",
+	tiles = {"default_cobble.png"},
+	drawtype = "nodebox",
+	paramtype = "light",
+	groups = {cracky=3, stone=2},
+	node_box = {
+		type = "fixed",
+		fixed = {
+			{-0.5, -0.5, -0.5, 0.5, 0, 0.5},
+			{-0.5, 0, -0.5, 0.5, 0.5, 0},
+		},
+	},
+	sounds = default.node_sound_stone_defaults(),
+})
+
+minetest.register_node("catacomb:staire", {
+	description = "Stair East",
+	tiles = {"default_cobble.png"},
+	drawtype = "nodebox",
+	paramtype = "light",
+	groups = {cracky=3, stone=2},
+	node_box = {
+		type = "fixed",
+		fixed = {
+			{-0.5, -0.5, -0.5, 0.5, 0, 0.5},
+			{0, 0, -0.5, 0.5, 0.5, 0.5},
+		},
+	},
+	sounds = default.node_sound_stone_defaults(),
+})
+
+minetest.register_node("catacomb:stairw", {
+	description = "Stair west",
+	tiles = {"default_cobble.png"},
+	drawtype = "nodebox",
+	paramtype = "light",
+	groups = {cracky=3, stone=2},
+	node_box = {
+		type = "fixed",
+		fixed = {
+			{-0.5, -0.5, -0.5, 0.5, 0, 0.5},
+			{-0.5, 0, -0.5, 0, 0.5, 0.5},
+		},
+	},
 	sounds = default.node_sound_stone_defaults(),
 })
 
@@ -112,19 +171,21 @@ minetest.register_abm({
 		local c_leaves = minetest.get_content_id("default:leaves")
 		local c_apple = minetest.get_content_id("default:apple")
 		local c_catcobble = minetest.get_content_id("catacomb:cobble")
+		local c_stairn = minetest.get_content_id("catacomb:stairn")
+		local c_stairs = minetest.get_content_id("catacomb:stairs")
 		local c_chn = minetest.get_content_id("catacomb:chn")
 		local dlu = math.random(-1, 1)
 		local len = math.random(MINLEN, MAXLEN)
 		local vmvd, vmvu -- voxelmanip volume down, up
 		if dlu == -1 then -- down
 			vmvd = -len
-			vmvu = 4
+			vmvu = 5
 		elseif dlu == 0 then -- level
 			vmvd = 0
-			vmvu = 4
+			vmvu = 5
 		else -- up
 			vmvd = 0
-			vmvu = len + 4
+			vmvu = len + 5
 		end
 
 		local vm = minetest.get_voxel_manip() -- spawn passage
@@ -136,33 +197,47 @@ minetest.register_abm({
 		local vvii = emax.x - emin.x + 1
 		local nvii = (emax.y - emin.y + 1) * vvii
 
-		local vi = area:index(x, y, z)
-		for k = 0, len do
-			for j = 1, 5 do
+		local vi = area:index(x, y, z) -- remove spawner
+		data[vi] = c_catcobble
+		local vi = vi + 1 + vvii -- across 1, up 1
+		for j = 1, 4 do -- carve doorway
+			for i = 1, 2 do
+				data[vi] = c_air
+				vi = vi + 1
+			end
+			vi = vi - 2 + vvii -- back 2, up 1
+		end
+
+		local vi = area:index(x, y, z+1)
+		for k = 1, len do
+			for j = 1, 6 do
 				for i = 1, 4 do
 					local nodid = data[vi]
 					if nodid ~= c_air
-					and nodid ~= c_leaves -- no cobble in leaves
+					and nodid ~= c_leaves -- no spawning in leaves
 					and nodid ~= c_apple then
-						if k == len then -- passage end wall with chamber spawner
-							if j == 1 and i == 1 then
-								data[vi] = c_chn
+						if dlu ~= 0 and j == 1
+						and not (dlu == 1 and k == 1)
+						and not (dlu == -1 and k == len)
+						and (i == 2 or i == 3) then
+							if dlu == -1 then
+								data[vi] = c_stairs
 							else
-								data[vi] = c_catcobble
+								data[vi] = c_stairn
 							end
-						else -- passage
-							if j == 1 or j == 5 or i == 1 or i == 4 then
-								data[vi] = c_catcobble
-							else
-								data[vi] = c_air
-							end
+						elseif k == len and j == 1 and i == 1 then
+							data[vi] = c_chn
+						elseif j == 1 or j == 6 or i == 1 or i == 4 then
+							data[vi] = c_catcobble
+						else
+							data[vi] = c_air
 						end
 					end
 					vi = vi + 1 -- eastwards 1
 				end
 				vi = vi - 4 + vvii -- back 4, up 1
 			end
-			vi = vi + (dlu - 5) * vvii + nvii -- down 4 or 5 or 6, northwards 1
+			vi = vi + (dlu - 6) * vvii + nvii -- down 5 or 6 or 7, northwards 1
 		end
 
 		vm:set_data(data)
@@ -190,7 +265,6 @@ minetest.register_abm({
 		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 		local c_catcobble = minetest.get_content_id("catacomb:cobble")
 		local c_pan = minetest.get_content_id("catacomb:pan")
-		local c_chn = minetest.get_content_id("catacomb:chn")
 		local widew = math.random(MINWID, MAXWID) - 1
 		local vmvw = -math.random(0, widew - 3)
 		local vmve = widew + vmvw
@@ -224,7 +298,7 @@ minetest.register_abm({
 		end
 		end
 
-		for k = 0, vmvn do -- spawn chamber
+		for k = 1, vmvn do -- spawn chamber
 		for j = 0, vmvu do
 			local vi = area:index(x+vmvw, y + j, z + k)
 			for i = 0, widew do
@@ -236,16 +310,12 @@ minetest.register_abm({
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
 					if k == vmvn and j == 0 and i == exoff then
-						if math.random() < CHCHA then
-							data[vi] = c_chn -- adjacent chamber spawner
-						else
-							data[vi] = c_pan -- passage spawner
-						end
-					elseif (k >= 1 and k <= vmvn - 1
+						data[vi] = c_pan -- passage spawner
+					elseif (k >= 2 and k <= vmvn - 1
 					and j >= 1 and j <= vmvu - 1
 					and i >= 1 and i <= widew - 1)
-					or (k == 0 and j >= 1 and j <= 3 and i >= 1 - vmvw
-					and i <= 2 - vmvw) then
+					or (k == 1 and j >= 1 and j <= 4
+					and (i == 1 - vmvw or i == 2 - vmvw)) then
 						data[vi] = c_air
 					else
 						data[vi] = c_catcobble
