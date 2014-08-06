@@ -1,11 +1,19 @@
--- catacomb 0.1.3 by paramat
+-- catacomb 0.1.4 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
 
--- higher passages, stairs
+-- bugfix: remove chamber spawner
+-- x, y, z limits for generation
 
 -- Parameters
+
+local YMIN = -33000 -- Approximate generation limits
+local YMAX = 47
+local XMIN = -33000
+local XMAX = 33000
+local ZMIN = -33000
+local ZMAX = 33000
 
 local MINLEN = 3 -- Min max length for passages
 local MAXLEN = 32
@@ -188,7 +196,7 @@ minetest.register_abm({
 			vmvu = len + 5
 		end
 
-		local vm = minetest.get_voxel_manip() -- spawn passage
+		local vm = minetest.get_voxel_manip()
 		local pos1 = {x=x, y=y+vmvd, z=z}
 		local pos2 = {x=x+3, y=y+vmvu, z=z+len}
 		local emin, emax = vm:read_from_map(pos1, pos2)
@@ -199,8 +207,16 @@ minetest.register_abm({
 
 		local vi = area:index(x, y, z) -- remove spawner
 		data[vi] = c_catcobble
-		local vi = vi + 1 + vvii -- across 1, up 1
-		for j = 1, 4 do -- carve doorway
+
+		if x < XMIN or x > XMAX or y < YMIN or y > YMAX or z < ZMIN or z > ZMAX then
+			vm:set_data(data) -- abort passage spawn
+			vm:write_to_map()
+			vm:update_map()
+			return
+		end
+
+		local vi = vi + 1 + vvii -- across 1, up 1 -- spawn passage
+		for j = 1, 4 do -- carve hole in chamber wall
 			for i = 1, 2 do
 				data[vi] = c_air
 				vi = vi + 1
@@ -279,19 +295,19 @@ minetest.register_abm({
 		local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
 		local data = vm:get_data()
 
+		local vi = area:index(x, y, z) -- remove spawner
+		data[vi] = c_catcobble
+
 		for k = 1, vmvn do -- check for obstruction
 		for j = 0, vmvu do
 			local vi = area:index(x+vmvw, y + j, z + k)
 			for i = 0, widew do
 				local nodid = data[vi]
 				if nodid == c_catcobble then
-					local vi = area:index(x, y, z)
-					data[vi] = c_catcobble -- replace spawner
-
-					vm:set_data(data)
+					vm:set_data(data) -- abort chamber spawn
 					vm:write_to_map()
 					vm:update_map()
-					return -- abort chamber spawn
+					return
 				end
 				vi = vi + 1
 			end
