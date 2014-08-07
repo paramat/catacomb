@@ -1,15 +1,12 @@
--- catacomb 0.1.4 by paramat
+-- catacomb 0.2.0 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
 
--- bugfix: remove chamber spawner
--- x, y, z limits for generation
-
 -- Parameters
 
 local YMIN = -33000 -- Approximate generation limits
-local YMAX = 47
+local YMAX = 33000
 local XMIN = -33000
 local XMAX = 33000
 local ZMIN = -33000
@@ -262,6 +259,302 @@ minetest.register_abm({
 	end,
 })
 
+
+-- Passage south
+
+minetest.register_abm({
+	nodenames = {"catacomb:pas"},
+	interval = 7,
+	chance = 1,
+	action = function(pos, node)
+		local x = pos.x
+		local y = pos.y
+		local z = pos.z
+		local c_air = minetest.get_content_id("air")
+		local c_ignore = minetest.get_content_id("ignore")
+		local c_leaves = minetest.get_content_id("default:leaves")
+		local c_apple = minetest.get_content_id("default:apple")
+		local c_catcobble = minetest.get_content_id("catacomb:cobble")
+		local c_stairn = minetest.get_content_id("catacomb:stairn")
+		local c_stairs = minetest.get_content_id("catacomb:stairs")
+		local c_chs = minetest.get_content_id("catacomb:chs")
+		local dlu = math.random(-1, 1)
+		local len = math.random(MINLEN, MAXLEN)
+		local vmvd, vmvu -- voxelmanip volume down, up
+		if dlu == -1 then -- down
+			vmvd = -len
+			vmvu = 5
+		elseif dlu == 0 then -- level
+			vmvd = 0
+			vmvu = 5
+		else -- up
+			vmvd = 0
+			vmvu = len + 5
+		end
+
+		local vm = minetest.get_voxel_manip()
+		local pos1 = {x=x, y=y+vmvd, z=z-len}
+		local pos2 = {x=x+3, y=y+vmvu, z=z}
+		local emin, emax = vm:read_from_map(pos1, pos2)
+		local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
+		local data = vm:get_data()
+		local vvii = emax.x - emin.x + 1
+		local nvii = (emax.y - emin.y + 1) * vvii
+
+		local vi = area:index(x, y, z) -- remove spawner
+		data[vi] = c_catcobble
+
+		if x < XMIN or x > XMAX or y < YMIN or y > YMAX or z < ZMIN or z > ZMAX then
+			vm:set_data(data) -- abort passage spawn
+			vm:write_to_map()
+			vm:update_map()
+			return
+		end
+
+		local vi = vi + 1 + vvii -- across 1, up 1 -- spawn passage
+		for j = 1, 4 do -- carve hole in chamber wall
+			for i = 1, 2 do
+				data[vi] = c_air
+				vi = vi + 1
+			end
+			vi = vi - 2 + vvii -- back 2, up 1
+		end
+
+		local vi = area:index(x, y, z-1)
+		for k = 1, len do
+			for j = 1, 6 do
+				for i = 1, 4 do
+					local nodid = data[vi]
+					if nodid ~= c_air
+					and nodid ~= c_leaves -- no spawning in leaves
+					and nodid ~= c_apple then
+						if dlu ~= 0 and j == 1
+						and not (dlu == 1 and k == 1)
+						and not (dlu == -1 and k == len)
+						and (i == 2 or i == 3) then
+							if dlu == 1 then
+								data[vi] = c_stairs
+							else
+								data[vi] = c_stairn
+							end
+						elseif k == len and j == 1 and i == 1 then
+							data[vi] = c_chs
+						elseif j == 1 or j == 6 or i == 1 or i == 4 then
+							data[vi] = c_catcobble
+						else
+							data[vi] = c_air
+						end
+					end
+					vi = vi + 1 -- eastwards 1
+				end
+				vi = vi - 4 + vvii -- back 4, up 1
+			end
+			vi = vi + (dlu - 6) * vvii - nvii -- down 5 or 6 or 7, southwards 1
+		end
+
+		vm:set_data(data)
+		vm:write_to_map()
+		vm:update_map()
+	end,
+})
+
+-- Passage east
+
+minetest.register_abm({
+	nodenames = {"catacomb:pae"},
+	interval = 7,
+	chance = 1,
+	action = function(pos, node)
+		local x = pos.x
+		local y = pos.y
+		local z = pos.z
+		local c_air = minetest.get_content_id("air")
+		local c_ignore = minetest.get_content_id("ignore")
+		local c_leaves = minetest.get_content_id("default:leaves")
+		local c_apple = minetest.get_content_id("default:apple")
+		local c_catcobble = minetest.get_content_id("catacomb:cobble")
+		local c_staire = minetest.get_content_id("catacomb:staire")
+		local c_stairw = minetest.get_content_id("catacomb:stairw")
+		local c_che = minetest.get_content_id("catacomb:che")
+		local dlu = math.random(-1, 1)
+		local len = math.random(MINLEN, MAXLEN)
+		local vmvd, vmvu -- voxelmanip volume down, up
+		if dlu == -1 then -- down
+			vmvd = -len
+			vmvu = 5
+		elseif dlu == 0 then -- level
+			vmvd = 0
+			vmvu = 5
+		else -- up
+			vmvd = 0
+			vmvu = len + 5
+		end
+
+		local vm = minetest.get_voxel_manip()
+		local pos1 = {x=x, y=y+vmvd, z=z}
+		local pos2 = {x=x+len, y=y+vmvu, z=z+3}
+		local emin, emax = vm:read_from_map(pos1, pos2)
+		local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
+		local data = vm:get_data()
+		local vvii = emax.x - emin.x + 1
+		local nvii = (emax.y - emin.y + 1) * vvii
+
+		local vi = area:index(x, y, z) -- remove spawner
+		data[vi] = c_catcobble
+
+		if x < XMIN or x > XMAX or y < YMIN or y > YMAX or z < ZMIN or z > ZMAX then
+			vm:set_data(data) -- abort passage spawn
+			vm:write_to_map()
+			vm:update_map()
+			return
+		end
+
+		local vi = vi + nvii + vvii -- north 1, up 1 -- spawn passage
+		for j = 1, 4 do -- carve hole in chamber wall
+			for k = 1, 2 do
+				data[vi] = c_air
+				vi = vi + nvii
+			end
+			vi = vi - 2 * nvii + vvii -- back 2, up 1
+		end
+
+		local vi = area:index(x+1, y, z)
+		for i = 1, len do
+			for j = 1, 6 do
+				for k = 1, 4 do
+					local nodid = data[vi]
+					if nodid ~= c_air
+					and nodid ~= c_leaves -- no spawning in leaves
+					and nodid ~= c_apple then
+						if dlu ~= 0 and j == 1
+						and not (dlu == 1 and i == 1)
+						and not (dlu == -1 and i == len)
+						and (k == 2 or k == 3) then
+							if dlu == -1 then
+								data[vi] = c_stairw
+							else
+								data[vi] = c_staire
+							end
+						elseif i == len and j == 1 and k == 1 then
+							data[vi] = c_che
+						elseif j == 1 or j == 6 or k == 1 or k == 4 then
+							data[vi] = c_catcobble
+						else
+							data[vi] = c_air
+						end
+					end
+					vi = vi + nvii -- northwards 1
+				end
+				vi = vi - 4 * nvii + vvii -- back 4, up 1
+			end
+			vi = vi + (dlu - 6) * vvii + 1 -- down 5 or 6 or 7, eastwards 1
+		end
+
+		vm:set_data(data)
+		vm:write_to_map()
+		vm:update_map()
+	end,
+})
+
+
+-- Passage west
+
+minetest.register_abm({
+	nodenames = {"catacomb:paw"},
+	interval = 7,
+	chance = 1,
+	action = function(pos, node)
+		local x = pos.x
+		local y = pos.y
+		local z = pos.z
+		local c_air = minetest.get_content_id("air")
+		local c_ignore = minetest.get_content_id("ignore")
+		local c_leaves = minetest.get_content_id("default:leaves")
+		local c_apple = minetest.get_content_id("default:apple")
+		local c_catcobble = minetest.get_content_id("catacomb:cobble")
+		local c_staire = minetest.get_content_id("catacomb:staire")
+		local c_stairw = minetest.get_content_id("catacomb:stairw")
+		local c_che = minetest.get_content_id("catacomb:che")
+		local dlu = math.random(-1, 1)
+		local len = math.random(MINLEN, MAXLEN)
+		local vmvd, vmvu -- voxelmanip volume down, up
+		if dlu == -1 then -- down
+			vmvd = -len
+			vmvu = 5
+		elseif dlu == 0 then -- level
+			vmvd = 0
+			vmvu = 5
+		else -- up
+			vmvd = 0
+			vmvu = len + 5
+		end
+
+		local vm = minetest.get_voxel_manip()
+		local pos1 = {x=x-len, y=y+vmvd, z=z}
+		local pos2 = {x=x, y=y+vmvu, z=z+3}
+		local emin, emax = vm:read_from_map(pos1, pos2)
+		local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
+		local data = vm:get_data()
+		local vvii = emax.x - emin.x + 1
+		local nvii = (emax.y - emin.y + 1) * vvii
+
+		local vi = area:index(x, y, z) -- remove spawner
+		data[vi] = c_catcobble
+
+		if x < XMIN or x > XMAX or y < YMIN or y > YMAX or z < ZMIN or z > ZMAX then
+			vm:set_data(data) -- abort passage spawn
+			vm:write_to_map()
+			vm:update_map()
+			return
+		end
+
+		local vi = vi + nvii + vvii -- north 1, up 1 -- spawn passage
+		for j = 1, 4 do -- carve hole in chamber wall
+			for k = 1, 2 do
+				data[vi] = c_air
+				vi = vi + nvii
+			end
+			vi = vi - 2 * nvii + vvii -- back 2, up 1
+		end
+
+		local vi = area:index(x-1, y, z)
+		for i = 1, len do
+			for j = 1, 6 do
+				for k = 1, 4 do
+					local nodid = data[vi]
+					if nodid ~= c_air
+					and nodid ~= c_leaves -- no spawning in leaves
+					and nodid ~= c_apple then
+						if dlu ~= 0 and j == 1
+						and not (dlu == 1 and i == 1)
+						and not (dlu == -1 and i == len)
+						and (k == 2 or k == 3) then
+							if dlu == 1 then
+								data[vi] = c_stairw
+							else
+								data[vi] = c_staire
+							end
+						elseif i == len and j == 1 and k == 1 then
+							data[vi] = c_che
+						elseif j == 1 or j == 6 or k == 1 or k == 4 then
+							data[vi] = c_catcobble
+						else
+							data[vi] = c_air
+						end
+					end
+					vi = vi + nvii -- northwards 1
+				end
+				vi = vi - 4 * nvii + vvii -- back 4, up 1
+			end
+			vi = vi + (dlu - 6) * vvii - 1 -- down 5 or 6 or 7, westwards 1
+		end
+
+		vm:set_data(data)
+		vm:write_to_map()
+		vm:update_map()
+	end,
+})
+
 -- Chamber north
 
 minetest.register_abm({
@@ -332,6 +625,264 @@ minetest.register_abm({
 					and i >= 1 and i <= widew - 1)
 					or (k == 1 and j >= 1 and j <= 4
 					and (i == 1 - vmvw or i == 2 - vmvw)) then
+						data[vi] = c_air
+					else
+						data[vi] = c_catcobble
+					end
+				end
+				vi = vi + 1
+			end
+		end
+		end
+
+		vm:set_data(data)
+		vm:write_to_map()
+		vm:update_map()
+	end,
+})
+
+-- Chamber south
+
+minetest.register_abm({
+	nodenames = {"catacomb:chs"},
+	interval = 11,
+	chance = 1,
+	action = function(pos, node)
+		local x = pos.x
+		local y = pos.y
+		local z = pos.z
+		local c_air = minetest.get_content_id("air")
+		local c_ignore = minetest.get_content_id("ignore")
+		local c_cobble = minetest.get_content_id("default:cobble")
+		local c_mobble = minetest.get_content_id("default:mossycobble")
+		local c_leaves = minetest.get_content_id("default:leaves")
+		local c_apple = minetest.get_content_id("default:apple")
+		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
+		local c_catcobble = minetest.get_content_id("catacomb:cobble")
+		local c_pas = minetest.get_content_id("catacomb:pas")
+		local widew = math.random(MINWID, MAXWID) - 1
+		local vmvw = -math.random(0, widew - 3)
+		local vmve = widew + vmvw
+		local vmvs = math.random(MINWID, MAXWID) - 1
+		local vmvu = math.random(MINHEI, MAXHEI) - 1
+		local exoff = math.random(0, widew - 3) -- exit offset
+
+		local vm = minetest.get_voxel_manip()
+		local pos1 = {x=x+vmvw, y=y, z=z-vmvs}
+		local pos2 = {x=x+vmve, y=y+vmvu, z=z}
+		local emin, emax = vm:read_from_map(pos1, pos2)
+		local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
+		local data = vm:get_data()
+
+		local vi = area:index(x, y, z) -- remove spawner
+		data[vi] = c_catcobble
+
+		for k = 1, vmvs do -- check for obstruction
+		for j = 0, vmvu do
+			local vi = area:index(x+vmvw, y + j, z - k)
+			for i = 0, widew do
+				local nodid = data[vi]
+				if nodid == c_catcobble then
+					vm:set_data(data) -- abort chamber spawn
+					vm:write_to_map()
+					vm:update_map()
+					return
+				end
+				vi = vi + 1
+			end
+		end
+		end
+
+		for k = 1, vmvs do -- spawn chamber
+		for j = 0, vmvu do
+			local vi = area:index(x+vmvw, y + j, z - k)
+			for i = 0, widew do
+				local nodid = data[vi]
+				if nodid ~= c_air
+				and nodid ~= c_cobble -- default dungeons remain
+				and nodid ~= c_mobble
+				and nodid ~= c_stobble
+				and nodid ~= c_leaves
+				and nodid ~= c_apple then
+					if k == vmvs and j == 0 and i == exoff then
+						data[vi] = c_pas -- passage spawner
+					elseif (k >= 2 and k <= vmvs - 1
+					and j >= 1 and j <= vmvu - 1
+					and i >= 1 and i <= widew - 1)
+					or (k == 1 and j >= 1 and j <= 4
+					and (i == 1 - vmvw or i == 2 - vmvw)) then
+						data[vi] = c_air
+					else
+						data[vi] = c_catcobble
+					end
+				end
+				vi = vi + 1
+			end
+		end
+		end
+
+		vm:set_data(data)
+		vm:write_to_map()
+		vm:update_map()
+	end,
+})
+
+-- Chamber east
+
+minetest.register_abm({
+	nodenames = {"catacomb:che"},
+	interval = 11,
+	chance = 1,
+	action = function(pos, node)
+		local x = pos.x
+		local y = pos.y
+		local z = pos.z
+		local c_air = minetest.get_content_id("air")
+		local c_ignore = minetest.get_content_id("ignore")
+		local c_cobble = minetest.get_content_id("default:cobble")
+		local c_mobble = minetest.get_content_id("default:mossycobble")
+		local c_leaves = minetest.get_content_id("default:leaves")
+		local c_apple = minetest.get_content_id("default:apple")
+		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
+		local c_catcobble = minetest.get_content_id("catacomb:cobble")
+		local c_pae = minetest.get_content_id("catacomb:pae")
+		local widns = math.random(MINWID, MAXWID) - 1
+		local vmvs = -math.random(0, widns - 3)
+		local vmvn = widns + vmvs
+		local vmve = math.random(MINWID, MAXWID) - 1
+		local vmvu = math.random(MINHEI, MAXHEI) - 1
+		local exoff = math.random(0, widns - 3) -- exit offset
+
+		local vm = minetest.get_voxel_manip()
+		local pos1 = {x=x, y=y, z=z+vmvs}
+		local pos2 = {x=x+vmve, y=y+vmvu, z=z+vmvn}
+		local emin, emax = vm:read_from_map(pos1, pos2)
+		local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
+		local data = vm:get_data()
+
+		local vi = area:index(x, y, z) -- remove spawner
+		data[vi] = c_catcobble
+
+		for k = vmvs, vmvn do -- check for obstruction
+		for j = 0, vmvu do
+			local vi = area:index(x+1, y+j, z+k)
+			for i = 1, vmve do
+				local nodid = data[vi]
+				if nodid == c_catcobble then
+					vm:set_data(data) -- abort chamber spawn
+					vm:write_to_map()
+					vm:update_map()
+					return
+				end
+				vi = vi + 1
+			end
+		end
+		end
+
+		for k = vmvs, vmvn do -- spawn chamber
+		for j = 0, vmvu do
+			local vi = area:index(x+1, y+j, z+k)
+			for i = 1, vmve do
+				local nodid = data[vi]
+				if nodid ~= c_air
+				and nodid ~= c_cobble -- default dungeons remain
+				and nodid ~= c_mobble
+				and nodid ~= c_stobble
+				and nodid ~= c_leaves
+				and nodid ~= c_apple then
+					if i == vmve and j == 0 and k == vmvs + exoff then
+						data[vi] = c_pae -- passage spawner
+					elseif (i >= 2 and i <= vmve - 1
+					and j >= 1 and j <= vmvu - 1
+					and k >= vmvs + 1 and k <= vmvn - 1)
+					or (i == 1 and j >= 1 and j <= 4
+					and (k == 1 or k == 2)) then
+						data[vi] = c_air
+					else
+						data[vi] = c_catcobble
+					end
+				end
+				vi = vi + 1
+			end
+		end
+		end
+
+		vm:set_data(data)
+		vm:write_to_map()
+		vm:update_map()
+	end,
+})
+
+-- Chamber west
+
+minetest.register_abm({
+	nodenames = {"catacomb:chw"},
+	interval = 11,
+	chance = 1,
+	action = function(pos, node)
+		local x = pos.x
+		local y = pos.y
+		local z = pos.z
+		local c_air = minetest.get_content_id("air")
+		local c_ignore = minetest.get_content_id("ignore")
+		local c_cobble = minetest.get_content_id("default:cobble")
+		local c_mobble = minetest.get_content_id("default:mossycobble")
+		local c_leaves = minetest.get_content_id("default:leaves")
+		local c_apple = minetest.get_content_id("default:apple")
+		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
+		local c_catcobble = minetest.get_content_id("catacomb:cobble")
+		local c_pae = minetest.get_content_id("catacomb:pae")
+		local widns = math.random(MINWID, MAXWID) - 1
+		local vmvs = -math.random(0, widns - 3)
+		local vmvn = widns + vmvs
+		local vmvw = math.random(MINWID, MAXWID) - 1
+		local vmvu = math.random(MINHEI, MAXHEI) - 1
+		local exoff = math.random(0, widns - 3) -- exit offset
+
+		local vm = minetest.get_voxel_manip()
+		local pos1 = {x=x-vmvw, y=y, z=z+vmvs}
+		local pos2 = {x=x, y=y+vmvu, z=z+vmvn}
+		local emin, emax = vm:read_from_map(pos1, pos2)
+		local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
+		local data = vm:get_data()
+
+		local vi = area:index(x, y, z) -- remove spawner
+		data[vi] = c_catcobble
+
+		for k = vmvs, vmvn do -- check for obstruction
+		for j = 0, vmvu do
+			local vi = area:index(x-vmvw, y+j, z+k)
+			for i = 1, vmvw do
+				local nodid = data[vi]
+				if nodid == c_catcobble then
+					vm:set_data(data) -- abort chamber spawn
+					vm:write_to_map()
+					vm:update_map()
+					return
+				end
+				vi = vi + 1
+			end
+		end
+		end
+
+		for k = vmvs, vmvn do -- spawn chamber
+		for j = 0, vmvu do
+			local vi = area:index(x-vmvw, y+j, z+k)
+			for i = 1, vmvw do
+				local nodid = data[vi]
+				if nodid ~= c_air
+				and nodid ~= c_cobble -- default dungeons remain
+				and nodid ~= c_mobble
+				and nodid ~= c_stobble
+				and nodid ~= c_leaves
+				and nodid ~= c_apple then
+					if i == 1 and j == 0 and k == vmvs + exoff then
+						data[vi] = c_pae -- passage spawner
+					elseif (i >= 2 and i <= vmvw - 1
+					and j >= 1 and j <= vmvu - 1
+					and k >= vmvs + 1 and k <= vmvn - 1)
+					or (i == vmvw and j >= 1 and j <= 4
+					and (k == 1 or k == 2)) then
 						data[vi] = c_air
 					else
 						data[vi] = c_catcobble
