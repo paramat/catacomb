@@ -1,9 +1,9 @@
--- catacomb 0.2.1 by paramat
+-- catacomb 0.2.2 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
 
--- Bugfixes. 3 exits per chamber
+-- Abm timings phased. Check for ignore
 
 -- Parameters
 
@@ -167,7 +167,7 @@ minetest.register_node("catacomb:chw", {
 
 minetest.register_abm({
 	nodenames = {"catacomb:pan"},
-	interval = 7,
+	interval = 13,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -229,6 +229,7 @@ minetest.register_abm({
 				for i = 1, 4 do
 					local nodid = data[vi]
 					if nodid ~= c_air
+					and nodid ~= c_ignore
 					and nodid ~= c_leaves -- no spawning in leaves
 					and nodid ~= c_apple then
 						if dlu ~= 0 and j == 1
@@ -266,7 +267,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:pas"},
-	interval = 7,
+	interval = 14,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -328,6 +329,7 @@ minetest.register_abm({
 				for i = 1, 4 do
 					local nodid = data[vi]
 					if nodid ~= c_air
+					and nodid ~= c_ignore
 					and nodid ~= c_leaves -- no spawning in leaves
 					and nodid ~= c_apple then
 						if dlu ~= 0 and j == 1
@@ -364,7 +366,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:pae"},
-	interval = 7,
+	interval = 15,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -426,6 +428,7 @@ minetest.register_abm({
 				for k = 1, 4 do
 					local nodid = data[vi]
 					if nodid ~= c_air
+					and nodid ~= c_ignore
 					and nodid ~= c_leaves -- no spawning in leaves
 					and nodid ~= c_apple then
 						if dlu ~= 0 and j == 1
@@ -463,7 +466,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:paw"},
-	interval = 7,
+	interval = 16,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -525,6 +528,7 @@ minetest.register_abm({
 				for k = 1, 4 do
 					local nodid = data[vi]
 					if nodid ~= c_air
+					and nodid ~= c_ignore
 					and nodid ~= c_leaves -- no spawning in leaves
 					and nodid ~= c_apple then
 						if dlu ~= 0 and j == 1
@@ -561,7 +565,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:chn"},
-	interval = 11,
+	interval = 17,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -597,7 +601,7 @@ minetest.register_abm({
 		local vi = area:index(x, y, z) -- remove spawner
 		data[vi] = c_catcobble
 
-		for k = 1, vmvn do -- check for obstruction
+		for k = 1, vmvn do -- check for obstruction OPTIONAL
 		for j = 0, vmvu do
 			local vi = area:index(x+vmvw, y + j, z + k)
 			for i = 0, widew do
@@ -619,6 +623,7 @@ minetest.register_abm({
 			for i = 0, widew do
 				local nodid = data[vi]
 				if nodid ~= c_air
+				and nodid ~= c_ignore
 				and nodid ~= c_cobble -- default dungeons remain
 				and nodid ~= c_mobble
 				and nodid ~= c_stobble
@@ -655,7 +660,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:chs"},
-	interval = 11,
+	interval = 18,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -713,6 +718,7 @@ minetest.register_abm({
 			for i = 0, widew do
 				local nodid = data[vi]
 				if nodid ~= c_air
+				and nodid ~= c_ignore
 				and nodid ~= c_cobble -- default dungeons remain
 				and nodid ~= c_mobble
 				and nodid ~= c_stobble
@@ -749,7 +755,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:che"},
-	interval = 11,
+	interval = 19,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -807,6 +813,7 @@ minetest.register_abm({
 			for i = 1, vmve do
 				local nodid = data[vi]
 				if nodid ~= c_air
+				and nodid ~= c_ignore
 				and nodid ~= c_cobble -- default dungeons remain
 				and nodid ~= c_mobble
 				and nodid ~= c_stobble
@@ -843,7 +850,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:chw"},
-	interval = 11,
+	interval = 20,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -901,6 +908,7 @@ minetest.register_abm({
 			for i = 1, vmvw do
 				local nodid = data[vi]
 				if nodid ~= c_air
+				and nodid ~= c_ignore
 				and nodid ~= c_cobble -- default dungeons remain
 				and nodid ~= c_mobble
 				and nodid ~= c_stobble
