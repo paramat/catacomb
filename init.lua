@@ -1,7 +1,9 @@
--- catacomb 0.2.0 by paramat
+-- catacomb 0.2.1 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
+
+-- Bugfixes. 3 exits per chamber
 
 -- Parameters
 
@@ -474,7 +476,7 @@ minetest.register_abm({
 		local c_catcobble = minetest.get_content_id("catacomb:cobble")
 		local c_staire = minetest.get_content_id("catacomb:staire")
 		local c_stairw = minetest.get_content_id("catacomb:stairw")
-		local c_che = minetest.get_content_id("catacomb:che")
+		local c_chw = minetest.get_content_id("catacomb:chw")
 		local dlu = math.random(-1, 1)
 		local len = math.random(MINLEN, MAXLEN)
 		local vmvd, vmvu -- voxelmanip volume down, up
@@ -535,7 +537,7 @@ minetest.register_abm({
 								data[vi] = c_staire
 							end
 						elseif i == len and j == 1 and k == 1 then
-							data[vi] = c_che
+							data[vi] = c_chw
 						elseif j == 1 or j == 6 or k == 1 or k == 4 then
 							data[vi] = c_catcobble
 						else
@@ -574,12 +576,16 @@ minetest.register_abm({
 		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 		local c_catcobble = minetest.get_content_id("catacomb:cobble")
 		local c_pan = minetest.get_content_id("catacomb:pan")
+		local c_pae = minetest.get_content_id("catacomb:pae")
+		local c_paw = minetest.get_content_id("catacomb:paw")
 		local widew = math.random(MINWID, MAXWID) - 1
 		local vmvw = -math.random(0, widew - 3)
 		local vmve = widew + vmvw
 		local vmvn = math.random(MINWID, MAXWID) - 1
 		local vmvu = math.random(MINHEI, MAXHEI) - 1
-		local exoff = math.random(0, widew - 3) -- exit offset
+		local exoffn = math.random(0, widew - 3)
+		local exoffe = math.random(0, vmvn - 3)
+		local exoffw = math.random(0, vmvn - 3)
 
 		local vm = minetest.get_voxel_manip()
 		local pos1 = {x=x+vmvw, y=y, z=z}
@@ -618,8 +624,12 @@ minetest.register_abm({
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
-					if k == vmvn and j == 0 and i == exoff then
+					if k == vmvn and j == 0 and i == exoffn then
 						data[vi] = c_pan -- passage spawner
+					elseif i == widew and j == 0 and k == exoffe then
+						data[vi] = c_pae
+					elseif i == 0 and j == 0 and k == exoffw then
+						data[vi] = c_paw
 					elseif (k >= 2 and k <= vmvn - 1
 					and j >= 1 and j <= vmvu - 1
 					and i >= 1 and i <= widew - 1)
@@ -660,12 +670,16 @@ minetest.register_abm({
 		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 		local c_catcobble = minetest.get_content_id("catacomb:cobble")
 		local c_pas = minetest.get_content_id("catacomb:pas")
+		local c_pae = minetest.get_content_id("catacomb:pae")
+		local c_paw = minetest.get_content_id("catacomb:paw")
 		local widew = math.random(MINWID, MAXWID) - 1
 		local vmvw = -math.random(0, widew - 3)
 		local vmve = widew + vmvw
 		local vmvs = math.random(MINWID, MAXWID) - 1
 		local vmvu = math.random(MINHEI, MAXHEI) - 1
-		local exoff = math.random(0, widew - 3) -- exit offset
+		local exoffs = math.random(0, widew - 3)
+		local exoffe = math.random(0, vmvs - 3)
+		local exoffw = math.random(0, vmvs - 3)
 
 		local vm = minetest.get_voxel_manip()
 		local pos1 = {x=x+vmvw, y=y, z=z-vmvs}
@@ -706,6 +720,10 @@ minetest.register_abm({
 				and nodid ~= c_apple then
 					if k == vmvs and j == 0 and i == exoff then
 						data[vi] = c_pas -- passage spawner
+					elseif i == widew and j == 0 and k == exoffe then
+						data[vi] = c_pae
+					elseif i == 0 and j == 0 and k == exoffw then
+						data[vi] = c_paw
 					elseif (k >= 2 and k <= vmvs - 1
 					and j >= 1 and j <= vmvu - 1
 					and i >= 1 and i <= widew - 1)
@@ -745,13 +763,17 @@ minetest.register_abm({
 		local c_apple = minetest.get_content_id("default:apple")
 		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 		local c_catcobble = minetest.get_content_id("catacomb:cobble")
+		local c_pan = minetest.get_content_id("catacomb:pan")
+		local c_pas = minetest.get_content_id("catacomb:pas")
 		local c_pae = minetest.get_content_id("catacomb:pae")
 		local widns = math.random(MINWID, MAXWID) - 1
 		local vmvs = -math.random(0, widns - 3)
 		local vmvn = widns + vmvs
 		local vmve = math.random(MINWID, MAXWID) - 1
 		local vmvu = math.random(MINHEI, MAXHEI) - 1
-		local exoff = math.random(0, widns - 3) -- exit offset
+		local exoffn = math.random(0, vmve - 3)
+		local exoffs = math.random(0, vmve - 3)
+		local exoffe = math.random(0, widns - 3)
 
 		local vm = minetest.get_voxel_manip()
 		local pos1 = {x=x, y=y, z=z+vmvs}
@@ -790,8 +812,12 @@ minetest.register_abm({
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
-					if i == vmve and j == 0 and k == vmvs + exoff then
+					if i == vmve and j == 0 and k == vmvs + exoffe then
 						data[vi] = c_pae -- passage spawner
+					elseif k == vmvn and j == 0 and i == exoffn then
+						data[vi] = c_pan
+					elseif k == vmvs and j == 0 and i == exoffs then
+						data[vi] = c_pas
 					elseif (i >= 2 and i <= vmve - 1
 					and j >= 1 and j <= vmvu - 1
 					and k >= vmvs + 1 and k <= vmvn - 1)
@@ -831,13 +857,17 @@ minetest.register_abm({
 		local c_apple = minetest.get_content_id("default:apple")
 		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 		local c_catcobble = minetest.get_content_id("catacomb:cobble")
-		local c_pae = minetest.get_content_id("catacomb:pae")
+		local c_pan = minetest.get_content_id("catacomb:pan")
+		local c_pas = minetest.get_content_id("catacomb:pas")
+		local c_paw = minetest.get_content_id("catacomb:paw")
 		local widns = math.random(MINWID, MAXWID) - 1
 		local vmvs = -math.random(0, widns - 3)
 		local vmvn = widns + vmvs
 		local vmvw = math.random(MINWID, MAXWID) - 1
 		local vmvu = math.random(MINHEI, MAXHEI) - 1
-		local exoff = math.random(0, widns - 3) -- exit offset
+		local exoffn = math.random(0, vmvw - 3)
+		local exoffs = math.random(0, vmvw - 3)
+		local exoffw = math.random(0, widns - 3)
 
 		local vm = minetest.get_voxel_manip()
 		local pos1 = {x=x-vmvw, y=y, z=z+vmvs}
@@ -876,8 +906,12 @@ minetest.register_abm({
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
-					if i == 1 and j == 0 and k == vmvs + exoff then
-						data[vi] = c_pae -- passage spawner
+					if i == 1 and j == 0 and k == vmvs + exoffw then
+						data[vi] = c_paw -- passage spawner
+					elseif k == vmvn and j == 0 and i == exoffn then
+						data[vi] = c_pan
+					elseif k == vmvs and j == 0 and i == exoffs then
+						data[vi] = c_pas
 					elseif (i >= 2 and i <= vmvw - 1
 					and j >= 1 and j <= vmvu - 1
 					and k >= vmvs + 1 and k <= vmvn - 1)
