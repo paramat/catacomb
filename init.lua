@@ -1,9 +1,11 @@
--- catacomb 0.2.2 by paramat
+-- catacomb 0.2.3 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
 
--- Abm timings phased. Check for ignore
+-- Generation option
+-- Optional chamber obstruction check
+-- Check GEN and limits before placing passage spawners
 
 -- Parameters
 
@@ -13,6 +15,9 @@ local XMIN = -33000
 local XMAX = 33000
 local ZMIN = -33000
 local ZMAX = 33000
+
+local GEN = true -- Enable generation
+local OBCHECK = false -- Enable chamber obstruction check
 
 local MINLEN = 3 -- Min max length for passages
 local MAXLEN = 32
@@ -207,13 +212,6 @@ minetest.register_abm({
 		local vi = area:index(x, y, z) -- remove spawner
 		data[vi] = c_catcobble
 
-		if x < XMIN or x > XMAX or y < YMIN or y > YMAX or z < ZMIN or z > ZMAX then
-			vm:set_data(data) -- abort passage spawn
-			vm:write_to_map()
-			vm:update_map()
-			return
-		end
-
 		local vi = vi + 1 + vvii -- across 1, up 1 -- spawn passage
 		for j = 1, 4 do -- carve hole in chamber wall
 			for i = 1, 2 do
@@ -307,13 +305,6 @@ minetest.register_abm({
 		local vi = area:index(x, y, z) -- remove spawner
 		data[vi] = c_catcobble
 
-		if x < XMIN or x > XMAX or y < YMIN or y > YMAX or z < ZMIN or z > ZMAX then
-			vm:set_data(data) -- abort passage spawn
-			vm:write_to_map()
-			vm:update_map()
-			return
-		end
-
 		local vi = vi + 1 + vvii -- across 1, up 1 -- spawn passage
 		for j = 1, 4 do -- carve hole in chamber wall
 			for i = 1, 2 do
@@ -405,13 +396,6 @@ minetest.register_abm({
 
 		local vi = area:index(x, y, z) -- remove spawner
 		data[vi] = c_catcobble
-
-		if x < XMIN or x > XMAX or y < YMIN or y > YMAX or z < ZMIN or z > ZMAX then
-			vm:set_data(data) -- abort passage spawn
-			vm:write_to_map()
-			vm:update_map()
-			return
-		end
 
 		local vi = vi + nvii + vvii -- north 1, up 1 -- spawn passage
 		for j = 1, 4 do -- carve hole in chamber wall
@@ -506,13 +490,6 @@ minetest.register_abm({
 		local vi = area:index(x, y, z) -- remove spawner
 		data[vi] = c_catcobble
 
-		if x < XMIN or x > XMAX or y < YMIN or y > YMAX or z < ZMIN or z > ZMAX then
-			vm:set_data(data) -- abort passage spawn
-			vm:write_to_map()
-			vm:update_map()
-			return
-		end
-
 		local vi = vi + nvii + vvii -- north 1, up 1 -- spawn passage
 		for j = 1, 4 do -- carve hole in chamber wall
 			for k = 1, 2 do
@@ -601,21 +578,26 @@ minetest.register_abm({
 		local vi = area:index(x, y, z) -- remove spawner
 		data[vi] = c_catcobble
 
-		for k = 1, vmvn do -- check for obstruction OPTIONAL
-		for j = 0, vmvu do
-			local vi = area:index(x+vmvw, y + j, z + k)
-			for i = 0, widew do
-				local nodid = data[vi]
-				if nodid == c_catcobble then
-					vm:set_data(data) -- abort chamber spawn
-					vm:write_to_map()
-					vm:update_map()
-					return
+		if OBCHECK then
+			for k = 1, vmvn do -- check for obstruction
+			for j = 0, vmvu do
+				local vi = area:index(x+vmvw, y + j, z + k)
+				for i = 0, widew do
+					local nodid = data[vi]
+					if nodid == c_catcobble then
+						vm:set_data(data) -- abort chamber spawn
+						vm:write_to_map()
+						vm:update_map()
+						return
+					end
+					vi = vi + 1
 				end
-				vi = vi + 1
+			end
 			end
 		end
-		end
+
+		local paspawn = GEN -- whether to place passage spawners
+		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
 
 		for k = 1, vmvn do -- spawn chamber
 		for j = 0, vmvu do
@@ -629,11 +611,11 @@ minetest.register_abm({
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
-					if k == vmvn and j == 0 and i == exoffn then
+					if paspawn and k == vmvn and j == 0 and i == exoffn then
 						data[vi] = c_pan -- passage spawner
-					elseif i == widew and j == 0 and k == exoffe then
+					elseif paspawn and i == widew and j == 0 and k == exoffe then
 						data[vi] = c_pae
-					elseif i == 0 and j == 0 and k == exoffw then
+					elseif paspawn and i == 0 and j == 0 and k == exoffw then
 						data[vi] = c_paw
 					elseif (k >= 2 and k <= vmvn - 1
 					and j >= 1 and j <= vmvu - 1
@@ -696,21 +678,26 @@ minetest.register_abm({
 		local vi = area:index(x, y, z) -- remove spawner
 		data[vi] = c_catcobble
 
-		for k = 1, vmvs do -- check for obstruction
-		for j = 0, vmvu do
-			local vi = area:index(x+vmvw, y + j, z - k)
-			for i = 0, widew do
-				local nodid = data[vi]
-				if nodid == c_catcobble then
-					vm:set_data(data) -- abort chamber spawn
-					vm:write_to_map()
-					vm:update_map()
-					return
+		if OBCHECK then
+			for k = 1, vmvs do -- check for obstruction
+			for j = 0, vmvu do
+				local vi = area:index(x+vmvw, y + j, z - k)
+				for i = 0, widew do
+					local nodid = data[vi]
+					if nodid == c_catcobble then
+						vm:set_data(data) -- abort chamber spawn
+						vm:write_to_map()
+						vm:update_map()
+						return
+					end
+					vi = vi + 1
 				end
-				vi = vi + 1
+			end
 			end
 		end
-		end
+
+		local paspawn = GEN
+		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
 
 		for k = 1, vmvs do -- spawn chamber
 		for j = 0, vmvu do
@@ -724,11 +711,11 @@ minetest.register_abm({
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
-					if k == vmvs and j == 0 and i == exoff then
+					if paspawn and k == vmvs and j == 0 and i == exoff then
 						data[vi] = c_pas -- passage spawner
-					elseif i == widew and j == 0 and k == exoffe then
+					elseif paspawn and i == widew and j == 0 and k == exoffe then
 						data[vi] = c_pae
-					elseif i == 0 and j == 0 and k == exoffw then
+					elseif paspawn and i == 0 and j == 0 and k == exoffw then
 						data[vi] = c_paw
 					elseif (k >= 2 and k <= vmvs - 1
 					and j >= 1 and j <= vmvu - 1
@@ -791,21 +778,26 @@ minetest.register_abm({
 		local vi = area:index(x, y, z) -- remove spawner
 		data[vi] = c_catcobble
 
-		for k = vmvs, vmvn do -- check for obstruction
-		for j = 0, vmvu do
-			local vi = area:index(x+1, y+j, z+k)
-			for i = 1, vmve do
-				local nodid = data[vi]
-				if nodid == c_catcobble then
-					vm:set_data(data) -- abort chamber spawn
-					vm:write_to_map()
-					vm:update_map()
-					return
+		if OBCHECK then
+			for k = vmvs, vmvn do -- check for obstruction
+			for j = 0, vmvu do
+				local vi = area:index(x+1, y+j, z+k)
+				for i = 1, vmve do
+					local nodid = data[vi]
+					if nodid == c_catcobble then
+						vm:set_data(data) -- abort chamber spawn
+						vm:write_to_map()
+						vm:update_map()
+						return
+					end
+					vi = vi + 1
 				end
-				vi = vi + 1
+			end
 			end
 		end
-		end
+
+		local paspawn = GEN
+		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
 
 		for k = vmvs, vmvn do -- spawn chamber
 		for j = 0, vmvu do
@@ -819,11 +811,11 @@ minetest.register_abm({
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
-					if i == vmve and j == 0 and k == vmvs + exoffe then
+					if paspawn and i == vmve and j == 0 and k == vmvs + exoffe then
 						data[vi] = c_pae -- passage spawner
-					elseif k == vmvn and j == 0 and i == exoffn then
+					elseif paspawn and k == vmvn and j == 0 and i == exoffn then
 						data[vi] = c_pan
-					elseif k == vmvs and j == 0 and i == exoffs then
+					elseif paspawn and k == vmvs and j == 0 and i == exoffs then
 						data[vi] = c_pas
 					elseif (i >= 2 and i <= vmve - 1
 					and j >= 1 and j <= vmvu - 1
@@ -886,21 +878,26 @@ minetest.register_abm({
 		local vi = area:index(x, y, z) -- remove spawner
 		data[vi] = c_catcobble
 
-		for k = vmvs, vmvn do -- check for obstruction
-		for j = 0, vmvu do
-			local vi = area:index(x-vmvw, y+j, z+k)
-			for i = 1, vmvw do
-				local nodid = data[vi]
-				if nodid == c_catcobble then
-					vm:set_data(data) -- abort chamber spawn
-					vm:write_to_map()
-					vm:update_map()
-					return
+		if OBCHECK then
+			for k = vmvs, vmvn do -- check for obstruction
+			for j = 0, vmvu do
+				local vi = area:index(x-vmvw, y+j, z+k)
+				for i = 1, vmvw do
+					local nodid = data[vi]
+					if nodid == c_catcobble then
+						vm:set_data(data) -- abort chamber spawn
+						vm:write_to_map()
+						vm:update_map()
+						return
+					end
+					vi = vi + 1
 				end
-				vi = vi + 1
+			end
 			end
 		end
-		end
+
+		local paspawn = GEN
+		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
 
 		for k = vmvs, vmvn do -- spawn chamber
 		for j = 0, vmvu do
@@ -914,11 +911,11 @@ minetest.register_abm({
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
-					if i == 1 and j == 0 and k == vmvs + exoffw then
+					if paspawn and i == 1 and j == 0 and k == vmvs + exoffw then
 						data[vi] = c_paw -- passage spawner
-					elseif k == vmvn and j == 0 and i == exoffn then
+					elseif paspawn and k == vmvn and j == 0 and i == exoffn then
 						data[vi] = c_pan
-					elseif k == vmvs and j == 0 and i == exoffs then
+					elseif paspawn and k == vmvs and j == 0 and i == exoffs then
 						data[vi] = c_pas
 					elseif (i >= 2 and i <= vmvw - 1
 					and j >= 1 and j <= vmvu - 1
