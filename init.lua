@@ -1,11 +1,12 @@
--- catacomb 0.2.3 by paramat
+-- catacomb 0.2.4 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
 
--- Generation option
--- Optional chamber obstruction check
--- Check GEN and limits before placing passage spawners
+-- 3D noise shapes and spaces catacombs
+-- on-generated function adds initial spawner
+-- max y spawn parameter
+-- bugfixes
 
 -- Parameters
 
@@ -16,8 +17,17 @@ local XMAX = 33000
 local ZMIN = -33000
 local ZMAX = 33000
 
+local YMAXSPA = -112 -- Maximum y for initial catacomb spawn
+
+local SEED = 5829058
+local OCTA = 3
+local PERS = 0.5
+local SCAL = 512
+local TCATSPA = 1.0 -- 3D noise threshold for catacomb spawn
+local TCATA = 0.4 -- 3D noise threshold for catacomb generation
 local GEN = true -- Enable generation
-local OBCHECK = false -- Enable chamber obstruction check
+local OBCHECK = true -- Enable chamber obstruction check
+local ABMINT = 1 -- ABM interval multiplier, 1 = fast generation
 
 local MINLEN = 3 -- Min max length for passages
 local MAXLEN = 32
@@ -172,7 +182,7 @@ minetest.register_node("catacomb:chw", {
 
 minetest.register_abm({
 	nodenames = {"catacomb:pan"},
-	interval = 13,
+	interval = 17 * ABMINT,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -257,6 +267,7 @@ minetest.register_abm({
 		vm:set_data(data)
 		vm:write_to_map()
 		vm:update_map()
+		print ("[catacomb] Passage north "..len)
 	end,
 })
 
@@ -265,7 +276,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:pas"},
-	interval = 14,
+	interval = 18 * ABMINT,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -350,6 +361,7 @@ minetest.register_abm({
 		vm:set_data(data)
 		vm:write_to_map()
 		vm:update_map()
+		print ("[catacomb] Passage south "..len)
 	end,
 })
 
@@ -357,7 +369,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:pae"},
-	interval = 15,
+	interval = 19 * ABMINT,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -442,6 +454,7 @@ minetest.register_abm({
 		vm:set_data(data)
 		vm:write_to_map()
 		vm:update_map()
+		print ("[catacomb] Passage east "..len)
 	end,
 })
 
@@ -450,7 +463,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:paw"},
-	interval = 16,
+	interval = 20 * ABMINT,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -535,6 +548,7 @@ minetest.register_abm({
 		vm:set_data(data)
 		vm:write_to_map()
 		vm:update_map()
+		print ("[catacomb] Passage west "..len)
 	end,
 })
 
@@ -542,7 +556,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:chn"},
-	interval = 17,
+	interval = 21 * ABMINT,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -565,8 +579,8 @@ minetest.register_abm({
 		local vmvn = math.random(MINWID, MAXWID) - 1
 		local vmvu = math.random(MINHEI, MAXHEI) - 1
 		local exoffn = math.random(0, widew - 3)
-		local exoffe = math.random(0, vmvn - 3)
-		local exoffw = math.random(0, vmvn - 3)
+		local exoffe = math.random(1, vmvn - 3)
+		local exoffw = math.random(1, vmvn - 3)
 
 		local vm = minetest.get_voxel_manip()
 		local pos1 = {x=x+vmvw, y=y, z=z}
@@ -596,7 +610,9 @@ minetest.register_abm({
 			end
 		end
 
-		local paspawn = GEN -- whether to place passage spawners
+		local perlin = minetest.get_perlin(SEED, OCTA, PERS, SCAL)
+		local n_cata = perlin:get3d({x=x,y=y,z=z})
+		local paspawn = GEN and n_cata > TCATA -- whether to place passage spawners
 		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
 
 		for k = 1, vmvn do -- spawn chamber
@@ -635,6 +651,7 @@ minetest.register_abm({
 		vm:set_data(data)
 		vm:write_to_map()
 		vm:update_map()
+		print ("[catacomb] Chamber north")
 	end,
 })
 
@@ -642,7 +659,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:chs"},
-	interval = 18,
+	interval = 22 * ABMINT,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -665,8 +682,8 @@ minetest.register_abm({
 		local vmvs = math.random(MINWID, MAXWID) - 1
 		local vmvu = math.random(MINHEI, MAXHEI) - 1
 		local exoffs = math.random(0, widew - 3)
-		local exoffe = math.random(0, vmvs - 3)
-		local exoffw = math.random(0, vmvs - 3)
+		local exoffe = math.random(1, vmvs - 3)
+		local exoffw = math.random(1, vmvs - 3)
 
 		local vm = minetest.get_voxel_manip()
 		local pos1 = {x=x+vmvw, y=y, z=z-vmvs}
@@ -696,7 +713,9 @@ minetest.register_abm({
 			end
 		end
 
-		local paspawn = GEN
+		local perlin = minetest.get_perlin(SEED, OCTA, PERS, SCAL)
+		local n_cata = perlin:get3d({x=x,y=y,z=z})
+		local paspawn = GEN and n_cata > TCATA -- whether to place passage spawners
 		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
 
 		for k = 1, vmvs do -- spawn chamber
@@ -711,7 +730,7 @@ minetest.register_abm({
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
-					if paspawn and k == vmvs and j == 0 and i == exoff then
+					if paspawn and k == vmvs and j == 0 and i == exoffs then
 						data[vi] = c_pas -- passage spawner
 					elseif paspawn and i == widew and j == 0 and k == exoffe then
 						data[vi] = c_pae
@@ -735,6 +754,7 @@ minetest.register_abm({
 		vm:set_data(data)
 		vm:write_to_map()
 		vm:update_map()
+		print ("[catacomb] Chamber south")
 	end,
 })
 
@@ -742,7 +762,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:che"},
-	interval = 19,
+	interval = 23 * ABMINT,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -764,8 +784,8 @@ minetest.register_abm({
 		local vmvn = widns + vmvs
 		local vmve = math.random(MINWID, MAXWID) - 1
 		local vmvu = math.random(MINHEI, MAXHEI) - 1
-		local exoffn = math.random(0, vmve - 3)
-		local exoffs = math.random(0, vmve - 3)
+		local exoffn = math.random(1, vmve - 3)
+		local exoffs = math.random(1, vmve - 3)
 		local exoffe = math.random(0, widns - 3)
 
 		local vm = minetest.get_voxel_manip()
@@ -796,7 +816,9 @@ minetest.register_abm({
 			end
 		end
 
-		local paspawn = GEN
+		local perlin = minetest.get_perlin(SEED, OCTA, PERS, SCAL)
+		local n_cata = perlin:get3d({x=x,y=y,z=z})
+		local paspawn = GEN and n_cata > TCATA -- whether to place passage spawners
 		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
 
 		for k = vmvs, vmvn do -- spawn chamber
@@ -835,6 +857,7 @@ minetest.register_abm({
 		vm:set_data(data)
 		vm:write_to_map()
 		vm:update_map()
+		print ("[catacomb] Chamber east")
 	end,
 })
 
@@ -842,7 +865,7 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"catacomb:chw"},
-	interval = 20,
+	interval = 24 * ABMINT,
 	chance = 1,
 	action = function(pos, node)
 		local x = pos.x
@@ -864,8 +887,8 @@ minetest.register_abm({
 		local vmvn = widns + vmvs
 		local vmvw = math.random(MINWID, MAXWID) - 1
 		local vmvu = math.random(MINHEI, MAXHEI) - 1
-		local exoffn = math.random(0, vmvw - 3)
-		local exoffs = math.random(0, vmvw - 3)
+		local exoffn = math.random(1, vmvw - 3)
+		local exoffs = math.random(1, vmvw - 3)
 		local exoffw = math.random(0, widns - 3)
 
 		local vm = minetest.get_voxel_manip()
@@ -896,7 +919,9 @@ minetest.register_abm({
 			end
 		end
 
-		local paspawn = GEN
+		local perlin = minetest.get_perlin(SEED, OCTA, PERS, SCAL)
+		local n_cata = perlin:get3d({x=x,y=y,z=z})
+		local paspawn = GEN and n_cata > TCATA -- whether to place passage spawners
 		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
 
 		for k = vmvs, vmvn do -- spawn chamber
@@ -935,6 +960,23 @@ minetest.register_abm({
 		vm:set_data(data)
 		vm:write_to_map()
 		vm:update_map()
+		print ("[catacomb] Chamber west")
 	end,
 })
+
+minetest.register_on_generated(function(minp, maxp, seed)
+	local x0 = minp.x
+	local y0 = minp.y
+	local z0 = minp.z
+	if not GEN
+	or not (x0 > XMIN and x0 < XMAX and y0 > YMIN and y0 <= YMAXSPA and z0 > ZMIN and z0 < ZMAX) then
+		return
+	end
+	local perlin = minetest.get_perlin(SEED, OCTA, PERS, SCAL)
+	local n_catspa = perlin:get3d({x=x0,y=y0,z=z0})
+	if n_catspa > TCATSPA then
+		minetest.add_node({x=x0,y=y0,z=z0},{name="catacomb:chs"})
+		print ("[catacomb] Spawn catacomb "..x0.." "..y0.." "..z0)
+	end
+end)
 

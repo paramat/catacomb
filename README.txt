@@ -1,4 +1,4 @@
-catacomb 0.2.3 by paramat
+catacomb 0.2.4 by paramat
 For Minetest 0.4.8 and later
 Depends default
 Licenses: code WTFPL
