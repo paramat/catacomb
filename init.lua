@@ -1,12 +1,7 @@
--- catacomb 0.2.4 by paramat
+-- catacomb 0.3.0 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
-
--- 3D noise shapes and spaces catacombs
--- on-generated function adds initial spawner
--- max y spawn parameter
--- bugfixes
 
 -- Parameters
 
@@ -23,19 +18,21 @@ local SEED = 5829058
 local OCTA = 3
 local PERS = 0.5
 local SCAL = 512
-local TCATSPA = 1.0 -- 3D noise threshold for catacomb spawn
-local TCATA = 0.4 -- 3D noise threshold for catacomb generation
+local TCATSPA = 2 -- 3D noise threshold for catacomb spawn
+local TCATA = -2 -- 3D noise threshold for catacomb generation
 local GEN = true -- Enable generation
 local OBCHECK = true -- Enable chamber obstruction check
 local ABMINT = 1 -- ABM interval multiplier, 1 = fast generation
 
-local MINLEN = 3 -- Min max length for passages
-local MAXLEN = 32
+local MINPLEN = 3 -- Min max length for passages
+local MAXPLEN = 32
+local MINPWID = 3 -- Min max (outer) width for passages
+local MAXPWID = 32
 
-local MINWID = 8 -- Min max EW NS widths, min max height, for chambers
-local MAXWID = 32
-local MINHEI = 6
-local MAXHEI = 32
+local MINCWID = 8 -- Min max EW NS widths, min max height, for chambers
+local MAXCWID = 32
+local MINCHEI = 6
+local MAXCHEI = 32
 
 -- Nodes
 
@@ -170,6 +167,14 @@ minetest.register_node("catacomb:che", {
 
 minetest.register_node("catacomb:chw", {
 	description = "Chamber spawner west",
+	tiles = {"default_cobble.png"},
+	is_ground_content = false,
+	groups = {cracky=3, stone=2},
+	sounds = default.node_sound_stone_defaults(),
+})
+
+minetest.register_node("catacomb:chambernorth", {
+	description = "Chamber spawner north 030",
 	tiles = {"default_cobble.png"},
 	is_ground_content = false,
 	groups = {cracky=3, stone=2},
@@ -979,4 +984,144 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		print ("[catacomb] Spawn catacomb "..x0.." "..y0.." "..z0)
 	end
 end)
+
+-- Chamber north v0.3.0
+
+minetest.register_abm({
+	nodenames = {"catacomb:chambernorth"},
+	interval = 21 * ABMINT,
+	chance = 1,
+	action = function(pos, node)
+		local x = pos.x
+		local y = pos.y
+		local z = pos.z
+		local c_air = minetest.get_content_id("air")
+		local c_ignore = minetest.get_content_id("ignore")
+		local c_cobble = minetest.get_content_id("default:cobble")
+		local c_mobble = minetest.get_content_id("default:mossycobble")
+		local c_leaves = minetest.get_content_id("default:leaves")
+		local c_apple = minetest.get_content_id("default:apple")
+		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
+
+		local c_catcobble = minetest.get_content_id("catacomb:cobble")
+		local c_stairn = minetest.get_content_id("catacomb:stairn")
+		local c_stairs = minetest.get_content_id("catacomb:stairs")
+
+		local vm = minetest.get_voxel_manip()
+		local pos1 = {x=x+1, y=y, z=z}
+		local pos2 = {x=x+MAXCWID, y=y, z=z}
+		local emin, emax = vm:read_from_map(pos1, pos2)
+		local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
+		local data = vm:get_data()
+
+		local wallwid = MAXPWID
+		for vi = 1, MAXCWID do
+			if data[vi] ~= c_catcobble then
+				wallwid = vi
+				break
+			end
+		end
+		local passwid = math.random(MINPWID, MAXPWID) -- width including walls
+		local passdlu = math.random(-1, 1) -- passage direction, -1 down, 0 level, 1 up
+		local passlen = math.random(MINPLEN, MAXPLEN)
+
+		local chamew = math.random(passwid, MAXCWID) - 1
+		local chamns = math.random(MINCWID, MAXCWID) - 1
+		local chamhei = math.random(MINCHEI, MAXCHEI) - 1
+		local chamhoff = -math.random(0, chamew + 1 - passwid) -- chamber W offset relative to passage
+		local chamvoff = math.min(passdlu * passlen, passlen - 1)
+
+		local vmvd = math.min(chamvoff, 0) -- voxel manip volume edges relative to spawner
+		local vmvu = math.max(chamvoff + chamhei, 5)
+		local vmvw = chamhoff
+		local vmve = chamhoff + chamew
+		local vmvn = chamns + passlen
+
+		local vm = minetest.get_voxel_manip()
+		local pos1 = {x=x+vmvw, y=y+vmvd, z=z}
+		local pos2 = {x=x+vmve, y=y+vmvu, z=z+vmvn}
+		local emin, emax = vm:read_from_map(pos1, pos2)
+		local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
+		local data = vm:get_data()
+		local vvii = emax.x - emin.x + 1
+		local nvii = (emax.y - emin.y + 1) * vvii
+
+		local vi = area:index(x, y, z) -- remove spawner
+		data[vi] = c_catcobble
+
+		-- obstruction check, noise and limits check for spawners
+
+		local vi = area:index(x+1, y+1, z) -- spawn passage
+		for j = 1, 4 do -- carve hole in chamber wall
+			for i = 1, passwid - 2 do
+				data[vi] = c_air
+				vi = vi + 1
+			end
+			vi = vi - passwid + 2 + vvii -- back 2, up 1
+		end
+
+		local vi = area:index(x, y, z+1)
+		for k = 1, passlen do
+			for j = 1, 6 do
+				for i = 1, passwid do
+					local nodid = data[vi]
+					if nodid ~= c_air
+					and nodid ~= c_ignore
+					and nodid ~= c_leaves -- no spawning in leaves
+					and nodid ~= c_apple then
+						if passdlu ~= 0 and j == 1
+						and not (passdlu == 1 and k == 1)
+						and not (passdlu == -1 and k == len)
+						and (i >= 2 and i <= passwid - 1) then
+							if passdlu == -1 then
+								data[vi] = c_stairs
+							else
+								data[vi] = c_stairn
+							end
+						elseif j == 1 or j == 6 or i == 1 or i == passwid then
+							data[vi] = c_catcobble
+						else
+							data[vi] = c_air
+						end
+					end
+					vi = vi + 1 -- eastwards 1
+				end
+				vi = vi - passwid + vvii -- back passwid, up 1
+			end
+			vi = vi + (passdlu - 6) * vvii + nvii -- down 5 or 6 or 7, northwards 1
+		end
+
+		for k = passlen + 1, vmvn do -- spawn chamber
+		for j = chamvoff, chamvoff + chamhei do
+			local vi = area:index(x+chamhoff, y+j, z+k)
+			for i = 0, chamew do
+				local nodid = data[vi]
+				if nodid ~= c_air
+				and nodid ~= c_ignore
+				and nodid ~= c_cobble -- default dungeons remain
+				and nodid ~= c_mobble
+				and nodid ~= c_stobble
+				and nodid ~= c_leaves
+				and nodid ~= c_apple then
+					if (k > passlen + 1 and k < vmvn
+					and j > chamvoff and j < chamvoff + chamhei
+					and i > 0 and i < chamew)
+					or (k == passlen + 1 and j > chamvoff and j <= chamvoff + 4
+					and (i > -chamhoff and i < -chamhoff + passwid - 1)) then
+						data[vi] = c_air
+					else
+						data[vi] = c_catcobble
+					end
+				end
+				vi = vi + 1
+			end
+		end
+		end
+
+		vm:set_data(data)
+		vm:write_to_map()
+		vm:update_map()
+		print ("[catacomb] Chamber north v0.3.0")
+	end,
+})
 
