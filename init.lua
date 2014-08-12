@@ -1,4 +1,4 @@
--- catacomb 0.3.3 by paramat
+-- catacomb 0.3.4 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
@@ -29,7 +29,7 @@ local MAXPLEN = 32
 local MINPWID = 3 -- Min max (outer) width for passages
 local MAXPWID = 24
 
-local MINCWID = 8 -- Min max EW NS widths, min max height, for chambers
+local MINCWID = 6 -- Min max outer EW NS widths, min max outer height, for chambers
 local MAXCWID = 32
 local MINCHEI = 6
 local MAXCHEI = 32
@@ -190,7 +190,7 @@ minetest.register_abm({
 		local passdlu = math.random(-1, 1) -- passage direction, -1 down, 0 level, 1 up
 		local passlen = math.random(MINPLEN, MAXPLEN)
 
-		local chamew = math.random(passwid, MAXCWID) - 1
+		local chamew = math.random(math.max(passwid, MINCWID), MAXCWID) - 1
 		local chamns = math.random(MINCWID, MAXCWID) - 1
 		local chamhei = math.random(MINCHEI, MAXCHEI) - 1
 		local chamhoff = -math.random(0, chamew + 1 - passwid) -- chamber W offset relative to passage
@@ -365,7 +365,7 @@ minetest.register_abm({
 		local passdlu = math.random(-1, 1) -- passage direction, -1 down, 0 level, 1 up
 		local passlen = math.random(MINPLEN, MAXPLEN)
 
-		local chamew = math.random(passwid, MAXCWID) - 1
+		local chamew = math.random(math.max(passwid, MINCWID), MAXCWID) - 1
 		local chamns = math.random(MINCWID, MAXCWID) - 1
 		local chamhei = math.random(MINCHEI, MAXCHEI) - 1
 		local chamhoff = -math.random(0, chamew + 1 - passwid) -- chamber W offset relative to passage
@@ -542,7 +542,7 @@ minetest.register_abm({
 		local passdlu = math.random(-1, 1) -- passage direction, -1 down, 0 level, 1 up
 		local passlen = math.random(MINPLEN, MAXPLEN)
 
-		local chamns = math.random(passwid, MAXCWID) - 1
+		local chamns = math.random(math.max(passwid, MINCWID), MAXCWID) - 1
 		local chamew = math.random(MINCWID, MAXCWID) - 1
 		local chamhei = math.random(MINCHEI, MAXCHEI) - 1
 		local chamhoff = -math.random(0, chamns + 1 - passwid) -- chamber S offset relative to passage
@@ -719,7 +719,7 @@ minetest.register_abm({
 		local passdlu = math.random(-1, 1) -- passage direction, -1 down, 0 level, 1 up
 		local passlen = math.random(MINPLEN, MAXPLEN)
 
-		local chamns = math.random(passwid, MAXCWID) - 1
+		local chamns = math.random(math.max(passwid, MINCWID), MAXCWID) - 1
 		local chamew = math.random(MINCWID, MAXCWID) - 1
 		local chamhei = math.random(MINCHEI, MAXCHEI) - 1
 		local chamhoff = -math.random(0, chamns + 1 - passwid) -- chamber S offset relative to passage
