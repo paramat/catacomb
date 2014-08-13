@@ -1,4 +1,4 @@
--- catacomb 0.3.4 by paramat
+-- catacomb 0.3.5 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
@@ -18,15 +18,15 @@ local SEED = 5829058
 local OCTA = 3
 local PERS = 0.5
 local SCAL = 512
-local TCATSPA = 2 -- 3D noise threshold for catacomb spawn
-local TCATA = -2 -- 3D noise threshold for catacomb generation
+local TCATSPA = 1 -- 3D noise threshold for catacomb spawn
+local TCATA = 0.8 -- 3D noise for catacomb generation limit
 local GEN = true -- Enable generation
 local OBCHECK = true -- Enable chamber obstruction check
-local ABMINT = 1 -- ABM interval multiplier, 1 = fast generation
+local ABMINT = 2 -- ABM interval multiplier, 1 = fast generation
 
 local MINPLEN = 3 -- Min max length for passages
 local MAXPLEN = 32
-local MINPWID = 3 -- Min max (outer) width for passages
+local MINPWID = 3 -- Min max outer width for passages
 local MAXPWID = 24
 
 local MINCWID = 6 -- Min max outer EW NS widths, min max outer height, for chambers
@@ -50,6 +50,7 @@ minetest.register_node("catacomb:stairn", {
 	tiles = {"default_cobble.png"},
 	drawtype = "nodebox",
 	paramtype = "light",
+	is_ground_content = false,
 	groups = {cracky=3, stone=2},
 	node_box = {
 		type = "fixed",
@@ -66,6 +67,7 @@ minetest.register_node("catacomb:stairs", {
 	tiles = {"default_cobble.png"},
 	drawtype = "nodebox",
 	paramtype = "light",
+	is_ground_content = false,
 	groups = {cracky=3, stone=2},
 	node_box = {
 		type = "fixed",
@@ -82,6 +84,7 @@ minetest.register_node("catacomb:staire", {
 	tiles = {"default_cobble.png"},
 	drawtype = "nodebox",
 	paramtype = "light",
+	is_ground_content = false,
 	groups = {cracky=3, stone=2},
 	node_box = {
 		type = "fixed",
@@ -98,6 +101,7 @@ minetest.register_node("catacomb:stairw", {
 	tiles = {"default_cobble.png"},
 	drawtype = "nodebox",
 	paramtype = "light",
+	is_ground_content = false,
 	groups = {cracky=3, stone=2},
 	node_box = {
 		type = "fixed",
@@ -140,6 +144,84 @@ minetest.register_node("catacomb:chamberw", {
 	groups = {cracky=3, stone=2},
 	sounds = default.node_sound_stone_defaults(),
 })
+
+-- On generated function
+
+minetest.register_on_generated(function(minp, maxp, seed)
+	local x0 = minp.x
+	local y0 = minp.y
+	local z0 = minp.z
+	if not GEN
+	or not (x0 > XMIN and x0 < XMAX and y0 > YMIN and y0 <= YMAXSPA and z0 > ZMIN and z0 < ZMAX) then
+		return
+	end
+	local perlin = minetest.get_perlin(SEED, OCTA, PERS, SCAL)
+	local n_cata = perlin:get3d({x=x0,y=y0,z=z0})
+	if n_cata > TCATSPA then
+		local t1 = os.clock() -- spawn chamber with south exit
+		local x0 = minp.x
+		local y0 = minp.y
+		local z0 = minp.z
+		local x1 = maxp.x
+		local y1 = maxp.y
+		local z1 = maxp.z
+		local exoffs = math.random(0, x1 - x0 - 3)
+
+		local c_air = minetest.get_content_id("air")
+		local c_ignore = minetest.get_content_id("ignore")
+		local c_cobble = minetest.get_content_id("default:cobble")
+		local c_mobble = minetest.get_content_id("default:mossycobble")
+		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
+
+		local c_catcobble = minetest.get_content_id("catacomb:cobble")
+		local c_chambers = minetest.get_content_id("catacomb:chambers")
+
+		local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
+		local area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
+		local data = vm:get_data()
+
+		for vi in area:iterp(emin, emax) do -- check for nearby catacomb cobble
+			if data[vi] == c_catcobble then
+				print ("[catacomb] Catacomb spawn obstructed")
+				return
+			end
+		end
+
+		for z = z0, z1 do -- catacomb spawn
+		for y = y0, y1 do
+			local vi = area:index(x0, y, z)
+			for x = x0, x1 do
+				local nodid = data[vi]
+				if nodid ~= c_air
+				and nodid ~= c_ignore
+				and nodid ~= c_cobble
+				and nodid ~= c_mobble
+				and nodid ~= c_stobble then
+					if z == z0 and y == y0 and x == x0 + exoffs then
+						data[vi] = c_chambers
+					elseif (z > z0 and z < z1
+					and y > y0 and y < y1
+					and x > x0 and x < x1) then
+						data[vi] = c_air
+					else
+						data[vi] = c_catcobble
+					end
+				end
+				vi = vi + 1
+			end
+		end
+		end
+
+		vm:set_data(data)
+		vm:set_lighting({day=0, night=0})
+		vm:calc_lighting()
+		vm:write_to_map(data)
+		vm:update_liquids()
+
+		local chugent = math.ceil((os.clock() - t1) * 1000)
+		print ("[catacomb] Spawn catacomb "..chugent.." minp "..x0.." "..y0.." "..z0)
+	end
+end)
 
 -- ABM
 
@@ -276,6 +358,10 @@ minetest.register_abm({
 			vi = vi + (passdlu - 6) * vvii + nvii -- down 5 or 6 or 7, northwards 1
 		end
 
+		local perlin = minetest.get_perlin(SEED, OCTA, PERS, SCAL)
+		local spawn = GEN and perlin:get3d({x=x+chamhoff,y=y+chamvoff,z=z+vmvn}) > TCATA -- whether to place spawners
+		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
+
 		for k = passlen + 1, vmvn do -- spawn chamber
 		for j = chamvoff, chamvoff + chamhei do
 			local vi = area:index(x+chamhoff, y+j, z+k)
@@ -288,16 +374,17 @@ minetest.register_abm({
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
-					if k == vmvn and j == chamvoff and i == exoffn then
+					if spawn and k == vmvn and j == chamvoff and i == exoffn then
 						data[vi] = c_chambern
-					elseif i == chamew and j == chamvoff and k == passlen + 1 + exoffe then
+					elseif spawn and i == chamew and j == chamvoff and k == passlen + 1 + exoffe then
 						data[vi] = c_chambere
-					elseif i == 0 and j == chamvoff and k == passlen + 1 + exoffw then
+					elseif spawn and i == 0 and j == chamvoff and k == passlen + 1 + exoffw then
 						data[vi] = c_chamberw
 					elseif (k > passlen + 1 and k < vmvn
 					and j > chamvoff and j < chamvoff + chamhei
 					and i > 0 and i < chamew)
-					or (k == passlen + 1 and j > chamvoff and j <= chamvoff + 4
+					or (k == passlen + 1
+					and j > chamvoff and j <= chamvoff + 4
 					and (i > -chamhoff and i < -chamhoff + passwid - 1)) then
 						data[vi] = c_air
 					else
@@ -451,6 +538,10 @@ minetest.register_abm({
 			vi = vi + (passdlu - 6) * vvii - nvii -- down 5 or 6 or 7, southwards 1
 		end
 
+		local perlin = minetest.get_perlin(SEED, OCTA, PERS, SCAL)
+		local spawn = GEN and perlin:get3d({x=x+chamhoff,y=y+chamvoff,z=z-vmvs}) > TCATA -- whether to place spawners
+		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
+
 		for k = passlen + 1, vmvs do -- spawn chamber
 		for j = chamvoff, chamvoff + chamhei do
 			local vi = area:index(x+chamhoff, y+j, z-k)
@@ -463,11 +554,11 @@ minetest.register_abm({
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
-					if k == vmvs and j == chamvoff and i == exoffs then
+					if spawn and k == vmvs and j == chamvoff and i == exoffs then
 						data[vi] = c_chambers
-					elseif i == chamew and j == chamvoff and k == passlen + 1 + exoffe then
+					elseif spawn and i == chamew and j == chamvoff and k == passlen + 1 + exoffe then
 						data[vi] = c_chambere
-					elseif i == 0 and j == chamvoff and k == passlen + 1 + exoffw then
+					elseif spawn and i == 0 and j == chamvoff and k == passlen + 1 + exoffw then
 						data[vi] = c_chamberw
 					elseif (k > passlen + 1 and k < vmvs
 					and j > chamvoff and j < chamvoff + chamhei
@@ -628,6 +719,10 @@ minetest.register_abm({
 			vi = vi + (passdlu - 6) * vvii + 1 -- down 5 or 6 or 7, eastwards 1
 		end
 
+		local perlin = minetest.get_perlin(SEED, OCTA, PERS, SCAL)
+		local spawn = GEN and perlin:get3d({x=x+vmve,y=y+chamvoff,z=z+chamhoff}) > TCATA -- whether to place spawners
+		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
+
 		for k = chamhoff, vmvn do -- spawn chamber
 		for j = chamvoff, chamvoff + chamhei do
 			local vi = area:index(x+passlen+1, y+j, z+k)
@@ -640,11 +735,11 @@ minetest.register_abm({
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
-					if k == chamhoff + exoffe and j == chamvoff and i == chamew then
+					if spawn and k == chamhoff + exoffe and j == chamvoff and i == chamew then
 						data[vi] = c_chambere
-					elseif i == exoffn and j == chamvoff and k == vmvn then
+					elseif spawn and i == exoffn and j == chamvoff and k == vmvn then
 						data[vi] = c_chambern
-					elseif i == exoffs and j == chamvoff and k == chamhoff then
+					elseif spawn and i == exoffs and j == chamvoff and k == chamhoff then
 						data[vi] = c_chambers
 					elseif (k > chamhoff and k < vmvn
 					and j > chamvoff and j < chamvoff + chamhei
@@ -805,6 +900,10 @@ minetest.register_abm({
 			vi = vi + (passdlu - 6) * vvii - 1 -- down 5 or 6 or 7, westwards 1
 		end
 
+		local perlin = minetest.get_perlin(SEED, OCTA, PERS, SCAL)
+		local spawn = GEN and perlin:get3d({x=x-vmvw,y=y+chamvoff,z=z+chamhoff}) > TCATA -- whether to place spawners
+		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
+
 		for k = chamhoff, vmvn do -- spawn chamber
 		for j = chamvoff, chamvoff + chamhei do
 			local vi = area:index(x-vmvw, y+j, z+k)
@@ -817,11 +916,11 @@ minetest.register_abm({
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
 				and nodid ~= c_apple then
-					if k == chamhoff + exoffw and j == chamvoff and i == 0 then
+					if spawn and k == chamhoff + exoffw and j == chamvoff and i == 0 then
 						data[vi] = c_chamberw
-					elseif i == exoffn and j == chamvoff and k == vmvn then
+					elseif spawn and i == exoffn and j == chamvoff and k == vmvn then
 						data[vi] = c_chambern
-					elseif i == exoffs and j == chamvoff and k == chamhoff then
+					elseif spawn and i == exoffs and j == chamvoff and k == chamhoff then
 						data[vi] = c_chambers
 					elseif (k > chamhoff and k < vmvn
 					and j > chamvoff and j < chamvoff + chamhei
