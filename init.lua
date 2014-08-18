@@ -1,4 +1,4 @@
--- catacomb 0.3.5 by paramat
+-- catacomb 0.3.6 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
@@ -12,15 +12,15 @@ local XMAX = 33000
 local ZMIN = -33000
 local ZMAX = 33000
 
-local YMAXSPA = -112 -- Maximum y for initial catacomb spawn
+local YMAXSPA = -33 -- Maximum y for initial catacomb spawn
 
 local SEED = 5829058
 local OCTA = 3
 local PERS = 0.5
 local SCAL = 512
-local TCATSPA = 1 -- 3D noise threshold for catacomb spawn
-local TCATA = 0.8 -- 3D noise for catacomb generation limit
-local GEN = true -- Enable generation
+local TCATSPA = 0.4 -- 3D noise threshold for initial spawn chamber
+local TCATA = 0.4 -- 3D noise for generation limit
+local GEN = true -- Enable spawn and generation
 local OBCHECK = true -- Enable chamber obstruction check
 local ABMINT = 2 -- ABM interval multiplier, 1 = fast generation
 
@@ -151,46 +151,61 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	local x0 = minp.x
 	local y0 = minp.y
 	local z0 = minp.z
+	local x1 = maxp.x
+	local y1 = maxp.y
+	local z1 = maxp.z
 	if not GEN
-	or not (x0 > XMIN and x0 < XMAX and y0 > YMIN and y0 <= YMAXSPA and z0 > ZMIN and z0 < ZMAX) then
+	or not (x0 > XMIN and x1 < XMAX and y0 > YMIN and y1 <= YMAXSPA and z0 > ZMIN and z1 < ZMAX) then
 		return
 	end
+
+	local t1 = os.clock()
 	local perlin = minetest.get_perlin(SEED, OCTA, PERS, SCAL)
 	local n_cata = perlin:get3d({x=x0,y=y0,z=z0})
-	if n_cata > TCATSPA then
-		local t1 = os.clock() -- spawn chamber with south exit
-		local x0 = minp.x
-		local y0 = minp.y
-		local z0 = minp.z
-		local x1 = maxp.x
-		local y1 = maxp.y
-		local z1 = maxp.z
-		local exoffs = math.random(0, x1 - x0 - 3)
+	if n_cata > TCATSPA then -- if within catacomb spawn volume
+		local sidelen = x1 - x0 + 1
+		local sidelen2 = sidelen * 2
+		local c_catcobble = minetest.get_content_id("catacomb:cobble")
+
+		for vmvns = z0 - sidelen2, z0 + sidelen2, sidelen do -- check for nearby catacomb cobble
+		for vmvud = y0 - sidelen2, y0 + sidelen2, sidelen do
+			local vm = minetest.get_voxel_manip()
+			local pos1 = {x=x0-sidelen2, y=vmvud, z=vmvns} -- x row of nodes 4 chunks long
+			local pos2 = {x=x0+sidelen2, y=vmvud, z=vmvns}
+			local emin, emax = vm:read_from_map(pos1, pos2)
+			local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
+			local data = vm:get_data()
+
+			for vi = 1, sidelen * 4 do
+				if data[vi] == c_catcobble then
+					local chugent = math.ceil((os.clock() - t1) * 1000)
+					print ("[catacomb] Catacomb spawn obstructed "..chugent.."ms")
+					return
+				end
+			end
+		end
+		end
+
+		local exoffs = math.random(0, MAXCWID - 3)
 
 		local c_air = minetest.get_content_id("air")
 		local c_ignore = minetest.get_content_id("ignore")
 		local c_cobble = minetest.get_content_id("default:cobble")
 		local c_mobble = minetest.get_content_id("default:mossycobble")
 		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
-
-		local c_catcobble = minetest.get_content_id("catacomb:cobble")
 		local c_chambers = minetest.get_content_id("catacomb:chambers")
 
-		local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
-		local area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
+		local vm = minetest.get_voxel_manip()
+		local pos1 = {x=x0, y=y0, z=z0}
+		local pos2 = {x=x0+MAXCWID, y=y0+MAXCHEI, z=z0+MAXCWID}
+		local emin, emax = vm:read_from_map(pos1, pos2)
+		local area = VoxelArea:new({MinEdge=emin, MaxEdge=emax})
 		local data = vm:get_data()
 
-		for vi in area:iterp(emin, emax) do -- check for nearby catacomb cobble
-			if data[vi] == c_catcobble then
-				print ("[catacomb] Catacomb spawn obstructed")
-				return
-			end
-		end
-
-		for z = z0, z1 do -- catacomb spawn
-		for y = y0, y1 do
+		for z = z0, z0 + MAXCWID do -- catacomb spawn
+		for y = y0, y0 + MAXCHEI do
 			local vi = area:index(x0, y, z)
-			for x = x0, x1 do
+			for x = x0, x0 + MAXCWID do
 				local nodid = data[vi]
 				if nodid ~= c_air
 				and nodid ~= c_ignore
@@ -199,9 +214,9 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				and nodid ~= c_stobble then
 					if z == z0 and y == y0 and x == x0 + exoffs then
 						data[vi] = c_chambers
-					elseif (z > z0 and z < z1
-					and y > y0 and y < y1
-					and x > x0 and x < x1) then
+					elseif (z > z0 and z < z0 + MAXCWID
+					and y > y0 and y < y0 + MAXCHEI
+					and x > x0 and x < x0 + MAXCWID) then
 						data[vi] = c_air
 					else
 						data[vi] = c_catcobble
@@ -213,13 +228,11 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		end
 
 		vm:set_data(data)
-		vm:set_lighting({day=0, night=0})
-		vm:calc_lighting()
-		vm:write_to_map(data)
-		vm:update_liquids()
+		vm:write_to_map()
+		vm:update_map()
 
 		local chugent = math.ceil((os.clock() - t1) * 1000)
-		print ("[catacomb] Spawn catacomb "..chugent.." minp "..x0.." "..y0.." "..z0)
+		print ("[catacomb] Spawn catacomb "..chugent.." ms minp "..x0.." "..y0.." "..z0)
 	end
 end)
 
@@ -401,7 +414,7 @@ minetest.register_abm({
 		vm:update_map()
 
 		local chugent = math.ceil((os.clock() - t1) * 1000)
-		print ("[catacomb] Chamber north "..chugent)
+		print ("[catacomb] Chamber north "..chugent.."ms")
 	end,
 })
 
@@ -458,8 +471,8 @@ minetest.register_abm({
 		local chamhoff = -math.random(0, chamew + 1 - passwid) -- chamber W offset relative to passage
 		local chamvoff = math.min(passdlu * passlen, passlen - 1)
 		local exoffs = math.random(0, chamew - 3)
-		local exoffe = math.random(0, chamns - 3)
-		local exoffw = math.random(0, chamns - 3)
+		local exoffe = math.random(0 + 3, chamns)
+		local exoffw = math.random(0 + 3, chamns)
 
 		local vmvd = math.min(chamvoff, 0) -- voxel manip volume edges relative to spawner
 		local vmvu = math.max(chamvoff + chamhei, 5)
@@ -580,7 +593,7 @@ minetest.register_abm({
 		vm:update_map()
 
 		local chugent = math.ceil((os.clock() - t1) * 1000)
-		print ("[catacomb] Chamber south "..chugent)
+		print ("[catacomb] Chamber south "..chugent.."ms")
 	end,
 })
 
@@ -761,7 +774,7 @@ minetest.register_abm({
 		vm:update_map()
 
 		local chugent = math.ceil((os.clock() - t1) * 1000)
-		print ("[catacomb] Chamber east "..chugent)
+		print ("[catacomb] Chamber east "..chugent.."ms")
 	end,
 })
 
@@ -942,7 +955,7 @@ minetest.register_abm({
 		vm:update_map()
 
 		local chugent = math.ceil((os.clock() - t1) * 1000)
-		print ("[catacomb] Chamber west "..chugent)
+		print ("[catacomb] Chamber west "..chugent.."ms")
 	end,
 })
 
