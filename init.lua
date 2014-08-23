@@ -1,7 +1,10 @@
--- catacomb 0.3.6 by paramat
+-- catacomb 0.3.7 by paramat
 -- For Minetest 0.4.8 and later
 -- Depends default
 -- License: code WTFPL
+
+-- Stairs and passage floors pass through voids below YMAXSPA
+-- no spawning in jungleleaves
 
 -- Parameters
 
@@ -12,13 +15,13 @@ local XMAX = 33000
 local ZMIN = -33000
 local ZMAX = 33000
 
-local YMAXSPA = -33 -- Maximum y for initial catacomb spawn
+local YMAXSPA = -113 -- Maximum y for initial catacomb spawn and steps in air
 
 local SEED = 5829058
 local OCTA = 3
 local PERS = 0.5
 local SCAL = 512
-local TCATSPA = 0.4 -- 3D noise threshold for initial spawn chamber
+local TCATSPA = 0.8 -- 3D noise threshold for initial spawn chamber
 local TCATA = 0.4 -- 3D noise for generation limit
 local GEN = true -- Enable spawn and generation
 local OBCHECK = true -- Enable chamber obstruction check
@@ -254,6 +257,7 @@ minetest.register_abm({
 		local c_cobble = minetest.get_content_id("default:cobble")
 		local c_mobble = minetest.get_content_id("default:mossycobble")
 		local c_leaves = minetest.get_content_id("default:leaves")
+		local c_jleaves = minetest.get_content_id("default:jungleleaves")
 		local c_apple = minetest.get_content_id("default:apple")
 		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 
@@ -345,23 +349,28 @@ minetest.register_abm({
 			for j = 1, 6 do
 				for i = 1, passwid do
 					local nodid = data[vi]
-					if nodid ~= c_air
-					and nodid ~= c_ignore
-					and nodid ~= c_leaves -- no spawning in leaves
+					if nodid ~= c_ignore
+					and nodid ~= c_leaves
+					and nodid ~= c_jleaves
 					and nodid ~= c_apple then
-						if passdlu ~= 0 and j == 1
+						if passdlu ~= 0 and j == 1 -- steps spawn in underground air
 						and not (passdlu == 1 and k == 1)
 						and not (passdlu == -1 and k == len)
-						and (i >= 2 and i <= passwid - 1) then
+						and (i >= 2 and i <= passwid - 1)
+						and (nodid ~= c_air or y <= YMAXSPA) then
 							if passdlu == -1 then
 								data[vi] = c_stairs
 							else
 								data[vi] = c_stairn
 							end
-						elseif j == 1 or j == 6 or i == 1 or i == passwid then
-							data[vi] = c_catcobble
-						else
-							data[vi] = c_air
+						elseif passdlu == 0 and j == 1 and (i >= 2 and i <= passwid - 1) then
+							data[vi] = c_catcobble -- level passage floor spawns in air
+						elseif nodid ~= c_air then
+							if j == 1 or j == 6 or i == 1 or i == passwid then
+								data[vi] = c_catcobble
+							else
+								data[vi] = c_air
+							end
 						end
 					end
 					vi = vi + 1 -- eastwards 1
@@ -386,6 +395,7 @@ minetest.register_abm({
 				and nodid ~= c_mobble
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
+				and nodid ~= c_jleaves
 				and nodid ~= c_apple then
 					if spawn and k == vmvn and j == chamvoff and i == exoffn then
 						data[vi] = c_chambern
@@ -434,6 +444,7 @@ minetest.register_abm({
 		local c_cobble = minetest.get_content_id("default:cobble")
 		local c_mobble = minetest.get_content_id("default:mossycobble")
 		local c_leaves = minetest.get_content_id("default:leaves")
+		local c_jleaves = minetest.get_content_id("default:jungleleaves")
 		local c_apple = minetest.get_content_id("default:apple")
 		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 
@@ -525,23 +536,28 @@ minetest.register_abm({
 			for j = 1, 6 do
 				for i = 1, passwid do
 					local nodid = data[vi]
-					if nodid ~= c_air
-					and nodid ~= c_ignore
+					if nodid ~= c_ignore
 					and nodid ~= c_leaves -- no spawning in leaves
+					and nodid ~= c_jleaves
 					and nodid ~= c_apple then
 						if passdlu ~= 0 and j == 1
 						and not (passdlu == 1 and k == 1)
 						and not (passdlu == -1 and k == len)
-						and (i >= 2 and i <= passwid - 1) then
+						and (i >= 2 and i <= passwid - 1)
+						and (nodid ~= c_air or y <= YMAXSPA) then
 							if passdlu == -1 then
 								data[vi] = c_stairn
 							else
 								data[vi] = c_stairs
 							end
-						elseif j == 1 or j == 6 or i == 1 or i == passwid then
+						elseif passdlu == 0 and j == 1 and (i >= 2 and i <= passwid - 1) then
 							data[vi] = c_catcobble
-						else
-							data[vi] = c_air
+						elseif nodid ~= c_air then
+							if j == 1 or j == 6 or i == 1 or i == passwid then
+								data[vi] = c_catcobble
+							else
+								data[vi] = c_air
+							end
 						end
 					end
 					vi = vi + 1 -- eastwards 1
@@ -566,6 +582,7 @@ minetest.register_abm({
 				and nodid ~= c_mobble
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
+				and nodid ~= c_jleaves
 				and nodid ~= c_apple then
 					if spawn and k == vmvs and j == chamvoff and i == exoffs then
 						data[vi] = c_chambers
@@ -613,6 +630,7 @@ minetest.register_abm({
 		local c_cobble = minetest.get_content_id("default:cobble")
 		local c_mobble = minetest.get_content_id("default:mossycobble")
 		local c_leaves = minetest.get_content_id("default:leaves")
+		local c_jleaves = minetest.get_content_id("default:jungleleaves")
 		local c_apple = minetest.get_content_id("default:apple")
 		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 
@@ -706,23 +724,28 @@ minetest.register_abm({
 			for j = 1, 6 do
 				for k = 1, passwid do
 					local nodid = data[vi]
-					if nodid ~= c_air
-					and nodid ~= c_ignore
+					if nodid ~= c_ignore
 					and nodid ~= c_leaves -- no spawning in leaves
+					and nodid ~= c_jleaves
 					and nodid ~= c_apple then
 						if passdlu ~= 0 and j == 1
 						and not (passdlu == 1 and i == 1)
 						and not (passdlu == -1 and i == len)
-						and (k >= 2 and k <= passwid - 1) then
+						and (k >= 2 and k <= passwid - 1)
+						and (nodid ~= c_air or y <= YMAXSPA) then
 							if passdlu == -1 then
 								data[vi] = c_stairw
 							else
 								data[vi] = c_staire
 							end
-						elseif j == 1 or j == 6 or k == 1 or k == passwid then
+						elseif passdlu == 0 and j == 1 and (k >= 2 and k <= passwid - 1) then
 							data[vi] = c_catcobble
-						else
-							data[vi] = c_air
+						elseif nodid ~= c_air then
+							if j == 1 or j == 6 or k == 1 or k == passwid then
+								data[vi] = c_catcobble
+							else
+								data[vi] = c_air
+							end
 						end
 					end
 					vi = vi + nvii -- northwards 1
@@ -747,6 +770,7 @@ minetest.register_abm({
 				and nodid ~= c_mobble
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
+				and nodid ~= c_jleaves
 				and nodid ~= c_apple then
 					if spawn and k == chamhoff + exoffe and j == chamvoff and i == chamew then
 						data[vi] = c_chambere
@@ -794,6 +818,7 @@ minetest.register_abm({
 		local c_cobble = minetest.get_content_id("default:cobble")
 		local c_mobble = minetest.get_content_id("default:mossycobble")
 		local c_leaves = minetest.get_content_id("default:leaves")
+		local c_jleaves = minetest.get_content_id("default:jungleleaves")
 		local c_apple = minetest.get_content_id("default:apple")
 		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 
@@ -887,23 +912,28 @@ minetest.register_abm({
 			for j = 1, 6 do
 				for k = 1, passwid do
 					local nodid = data[vi]
-					if nodid ~= c_air
-					and nodid ~= c_ignore
+					if nodid ~= c_ignore
 					and nodid ~= c_leaves -- no spawning in leaves
+					and nodid ~= c_jleaves
 					and nodid ~= c_apple then
 						if passdlu ~= 0 and j == 1
 						and not (passdlu == 1 and i == 1)
 						and not (passdlu == -1 and i == len)
-						and (k >= 2 and k <= passwid - 1) then
+						and (k >= 2 and k <= passwid - 1)
+						and (nodid ~= c_air or y <= YMAXSPA) then
 							if passdlu == -1 then
 								data[vi] = c_staire
 							else
 								data[vi] = c_stairw
 							end
-						elseif j == 1 or j == 6 or k == 1 or k == passwid then
+						elseif passdlu == 0 and j == 1 and (k >= 2 and k <= passwid - 1) then
 							data[vi] = c_catcobble
-						else
-							data[vi] = c_air
+						elseif nodid ~= c_air then
+							if j == 1 or j == 6 or k == 1 or k == passwid then
+								data[vi] = c_catcobble
+							else
+								data[vi] = c_air
+							end
 						end
 					end
 					vi = vi + nvii -- northwards 1
@@ -928,6 +958,7 @@ minetest.register_abm({
 				and nodid ~= c_mobble
 				and nodid ~= c_stobble
 				and nodid ~= c_leaves
+				and nodid ~= c_jleaves
 				and nodid ~= c_apple then
 					if spawn and k == chamhoff + exoffw and j == chamvoff and i == 0 then
 						data[vi] = c_chamberw
