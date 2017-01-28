@@ -1,3 +1,19 @@
+-- global access
+catacomb = {}
+
+local c_air = minetest.get_content_id("air")
+local c_ignore = minetest.get_content_id("ignore")
+local c_cobble = minetest.get_content_id("default:cobble")
+local c_mobble = minetest.get_content_id("default:mossycobble")
+local c_stobble = minetest.get_content_id("stairs:stair_cobble")
+local c_leaves = minetest.get_content_id("default:leaves")
+local c_jleaves = minetest.get_content_id("default:jungleleaves")
+local c_apple = minetest.get_content_id("default:apple")
+
+catacomb.chamber_protected_nodes = {[c_air] = true, [c_ignore] = true, [c_cobble] = true, [c_mobble] = true, [c_stobble] = true, [c_leaves] = true, [c_jleaves] = true, [c_apple] = true}
+-- c_cobble -- Default dungeons remain TODO update for new dungeons, mgv5/7
+catacomb.passage_protected_nodes = {[c_ignore] = true, [c_leaves] = true, [c_jleaves] = true, [c_apple] = true}
+
 -- Parameters
 
 -- Approximate generation limits
@@ -39,7 +55,6 @@ local MINCWID = 6 -- Min max outer EW NS widths, min max outer height.
 local MAXCWID = 32
 local MINCHEI = 6
 local MAXCHEI = 32
-
 
 -- Nodes
 
@@ -202,11 +217,6 @@ minetest.register_on_generated(function(minp, maxp, seed)
 
 	-- Spawn first chamber
 	local t1 = os.clock()
-	local c_air = minetest.get_content_id("air")
-	local c_ignore = minetest.get_content_id("ignore")
-	local c_cobble = minetest.get_content_id("default:cobble")
-	local c_mobble = minetest.get_content_id("default:mossycobble")
-	local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 	local c_chambers = minetest.get_content_id("catacomb:chambers")
 
 	local vm = minetest.get_voxel_manip()
@@ -223,11 +233,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		local vi = area:index(x0, y, z)
 		for x = x0, x0 + MAXCWID do
 			local nodid = data[vi]
-			if nodid ~= c_air
-			and nodid ~= c_ignore
-			and nodid ~= c_cobble
-			and nodid ~= c_mobble
-			and nodid ~= c_stobble then
+			if not catacomb.chamber_protected_nodes[nodid] then
 				if z == z0 and y == y0 and x == x0 + exoffs then
 					data[vi] = c_chambers
 				elseif (z > z0 and z < z0 + MAXCWID
@@ -265,15 +271,6 @@ minetest.register_abm({
 		local x = pos.x
 		local y = pos.y
 		local z = pos.z
-
-		local c_air = minetest.get_content_id("air")
-		local c_ignore = minetest.get_content_id("ignore")
-		local c_cobble = minetest.get_content_id("default:cobble")
-		local c_mobble = minetest.get_content_id("default:mossycobble")
-		local c_leaves = minetest.get_content_id("default:leaves")
-		local c_jleaves = minetest.get_content_id("default:jungleleaves")
-		local c_apple = minetest.get_content_id("default:apple")
-		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 
 		local c_catcobble = minetest.get_content_id("catacomb:cobble")
 		local c_stairn = minetest.get_content_id("catacomb:stairn")
@@ -369,13 +366,10 @@ minetest.register_abm({
 			for j = 1, 6 do
 				for i = 1, passwid do
 					local nodid = data[vi]
-					if nodid ~= c_ignore
-					and nodid ~= c_leaves
-					and nodid ~= c_jleaves
-					and nodid ~= c_apple then
+					if not catacomb.passage_protected_nodes[nodid] then
 						if passdlu ~= 0 and j == 1 -- steps spawn in underground air
 						and not (passdlu == 1 and k == 1)
-						and not (passdlu == -1 and k == len)
+						and not (passdlu == -1 and k == passlen)
 						and (i >= 2 and i <= passwid - 1)
 						and (nodid ~= c_air or y <= YMAXSPA) then
 							if passdlu == -1 then
@@ -411,14 +405,7 @@ minetest.register_abm({
 			local vi = area:index(x + chamhoff, y + j, z + k)
 			for i = 0, chamew do
 				local nodid = data[vi]
-				if nodid ~= c_air
-				and nodid ~= c_ignore
-				and nodid ~= c_cobble -- Default dungeons remain TODO update for new dungeons, mgv5/7
-				and nodid ~= c_mobble
-				and nodid ~= c_stobble
-				and nodid ~= c_leaves
-				and nodid ~= c_jleaves
-				and nodid ~= c_apple then
+				if not catacomb.chamber_protected_nodes[nodid] then
 					if spawn and k == vmvn and j == chamvoff and i == exoffn then
 						data[vi] = c_chambern
 					elseif spawn and i == chamew and j == chamvoff and k == passlen + 1 + exoffe then
@@ -462,14 +449,6 @@ minetest.register_abm({
 		local x = pos.x
 		local y = pos.y
 		local z = pos.z
-		local c_air = minetest.get_content_id("air")
-		local c_ignore = minetest.get_content_id("ignore")
-		local c_cobble = minetest.get_content_id("default:cobble")
-		local c_mobble = minetest.get_content_id("default:mossycobble")
-		local c_leaves = minetest.get_content_id("default:leaves")
-		local c_jleaves = minetest.get_content_id("default:jungleleaves")
-		local c_apple = minetest.get_content_id("default:apple")
-		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 
 		local c_catcobble = minetest.get_content_id("catacomb:cobble")
 		local c_stairn = minetest.get_content_id("catacomb:stairn")
@@ -559,10 +538,7 @@ minetest.register_abm({
 			for j = 1, 6 do
 				for i = 1, passwid do
 					local nodid = data[vi]
-					if nodid ~= c_ignore
-					and nodid ~= c_leaves -- no spawning in leaves
-					and nodid ~= c_jleaves
-					and nodid ~= c_apple then
+					if not catacomb.passage_protected_nodes[nodid] then
 						if passdlu ~= 0 and j == 1
 						and not (passdlu == 1 and k == 1)
 						and not (passdlu == -1 and k == len)
@@ -599,14 +575,7 @@ minetest.register_abm({
 			local vi = area:index(x + chamhoff, y + j, z - k)
 			for i = 0, chamew do
 				local nodid = data[vi]
-				if nodid ~= c_air
-				and nodid ~= c_ignore
-				and nodid ~= c_cobble -- default dungeons remain
-				and nodid ~= c_mobble
-				and nodid ~= c_stobble
-				and nodid ~= c_leaves
-				and nodid ~= c_jleaves
-				and nodid ~= c_apple then
+				if not catacomb.chamber_protected_nodes[nodid] then
 					if spawn and k == vmvs and j == chamvoff and i == exoffs then
 						data[vi] = c_chambers
 					elseif spawn and i == chamew and j == chamvoff and k == passlen + 1 + exoffe then
@@ -648,14 +617,6 @@ minetest.register_abm({
 		local x = pos.x
 		local y = pos.y
 		local z = pos.z
-		local c_air = minetest.get_content_id("air")
-		local c_ignore = minetest.get_content_id("ignore")
-		local c_cobble = minetest.get_content_id("default:cobble")
-		local c_mobble = minetest.get_content_id("default:mossycobble")
-		local c_leaves = minetest.get_content_id("default:leaves")
-		local c_jleaves = minetest.get_content_id("default:jungleleaves")
-		local c_apple = minetest.get_content_id("default:apple")
-		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 
 		local c_catcobble = minetest.get_content_id("catacomb:cobble")
 		local c_staire = minetest.get_content_id("catacomb:staire")
@@ -747,10 +708,7 @@ minetest.register_abm({
 			for j = 1, 6 do
 				for k = 1, passwid do
 					local nodid = data[vi]
-					if nodid ~= c_ignore
-					and nodid ~= c_leaves -- no spawning in leaves
-					and nodid ~= c_jleaves
-					and nodid ~= c_apple then
+					if not catacomb.passage_protected_nodes[nodid] then
 						if passdlu ~= 0 and j == 1
 						and not (passdlu == 1 and i == 1)
 						and not (passdlu == -1 and i == len)
@@ -787,14 +745,7 @@ minetest.register_abm({
 			local vi = area:index(x + passlen + 1, y + j, z + k)
 			for i = 0, chamew do
 				local nodid = data[vi]
-				if nodid ~= c_air
-				and nodid ~= c_ignore
-				and nodid ~= c_cobble -- default dungeons remain
-				and nodid ~= c_mobble
-				and nodid ~= c_stobble
-				and nodid ~= c_leaves
-				and nodid ~= c_jleaves
-				and nodid ~= c_apple then
+				if not catacomb.chamber_protected_nodes[nodid] then
 					if spawn and k == chamhoff + exoffe and j == chamvoff and i == chamew then
 						data[vi] = c_chambere
 					elseif spawn and i == exoffn and j == chamvoff and k == vmvn then
@@ -836,14 +787,6 @@ minetest.register_abm({
 		local x = pos.x
 		local y = pos.y
 		local z = pos.z
-		local c_air = minetest.get_content_id("air")
-		local c_ignore = minetest.get_content_id("ignore")
-		local c_cobble = minetest.get_content_id("default:cobble")
-		local c_mobble = minetest.get_content_id("default:mossycobble")
-		local c_leaves = minetest.get_content_id("default:leaves")
-		local c_jleaves = minetest.get_content_id("default:jungleleaves")
-		local c_apple = minetest.get_content_id("default:apple")
-		local c_stobble = minetest.get_content_id("stairs:stair_cobble")
 
 		local c_catcobble = minetest.get_content_id("catacomb:cobble")
 		local c_staire = minetest.get_content_id("catacomb:staire")
@@ -935,13 +878,10 @@ minetest.register_abm({
 			for j = 1, 6 do
 				for k = 1, passwid do
 					local nodid = data[vi]
-					if nodid ~= c_ignore
-					and nodid ~= c_leaves -- no spawning in leaves
-					and nodid ~= c_jleaves
-					and nodid ~= c_apple then
+					if not catacomb.passage_protected_nodes[nodid] then
 						if passdlu ~= 0 and j == 1
 						and not (passdlu == 1 and i == 1)
-						and not (passdlu == -1 and i == len)
+						and not (passdlu == -1 and i == passlen)
 						and (k >= 2 and k <= passwid - 1)
 						and (nodid ~= c_air or y <= YMAXSPA) then
 							if passdlu == -1 then
@@ -975,14 +915,7 @@ minetest.register_abm({
 			local vi = area:index(x - vmvw, y + j, z + k)
 			for i = 0, chamew - 1 do
 				local nodid = data[vi]
-				if nodid ~= c_air
-				and nodid ~= c_ignore
-				and nodid ~= c_cobble -- default dungeons remain
-				and nodid ~= c_mobble
-				and nodid ~= c_stobble
-				and nodid ~= c_leaves
-				and nodid ~= c_jleaves
-				and nodid ~= c_apple then
+				if not catacomb.chamber_protected_nodes[nodid] then
 					if spawn and k == chamhoff + exoffw and j == chamvoff and i == 0 then
 						data[vi] = c_chamberw
 					elseif spawn and i == exoffn and j == chamvoff and k == vmvn then
