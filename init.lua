@@ -10,11 +10,11 @@ local ZMAX = 33000
 local YMAXSPA = -33 -- Maximum y for initial catacomb spawn and steps in air
 
 -- Spawn and generation
-local TCATSPA = 0.8 -- 3D noise threshold for initial chamber
-local TCATA = 0.4 -- 3D noise for generation limit
+local TCATSPA = 2.0 -- 3D noise threshold for initial chamber
+local TCATA = -2.0 -- 3D noise for generation limit
 local GEN = true -- Enable spawn and generation
 local OBCHECK = true -- Enable chamber obstruction check
-local ABMINT = 2 -- ABM interval multiplier, 1 = fast generation
+local ABMINT = 1 -- ABM interval multiplier, 1 = fast generation
 
 -- Spawn and generation noise
 local np_cata = {
@@ -174,7 +174,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	local nobj_cata = minetest.get_perlin(np_cata)
 	local nval_cata = nobj_cata:get3d({x = x0, y = y0, z = z0})
 	if nval_cata < TCATSPA then 
-		print ("[catacomb] Spawn noise " .. nval_cata)
+		--print ("[catacomb] Spawn noise " .. nval_cata)
 		return
 	end
 
