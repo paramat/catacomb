@@ -224,15 +224,15 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		for x = x0, x0 + MAXCWID do
 			local nodid = data[vi]
 			if nodid ~= c_air
-			and nodid ~= c_ignore
-			and nodid ~= c_cobble
-			and nodid ~= c_mobble
-			and nodid ~= c_stobble then
+					and nodid ~= c_ignore
+					and nodid ~= c_cobble
+					and nodid ~= c_mobble
+					and nodid ~= c_stobble then
 				if z == z0 and y == y0 and x == x0 + exoffs then
 					data[vi] = c_chambers
 				elseif (z > z0 and z < z0 + MAXCWID
-				and y > y0 and y < y0 + MAXCHEI
-				and x > x0 and x < x0 + MAXCWID) then
+						and y > y0 and y < y0 + MAXCHEI
+						and x > x0 and x < x0 + MAXCWID) then
 					data[vi] = c_air
 				else
 					data[vi] = c_catcobble
@@ -248,7 +248,8 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	vm:update_map()
 
 	local chugent = math.ceil((os.clock() - t1) * 1000)
-	print ("[catacomb] Spawn first chamber " .. chugent .. " ms  minp " .. x0 .. " " .. y0 .. " " .. z0)
+	print ("[catacomb] Spawn first chamber " .. chugent ..
+		" ms  minp " .. x0 .. " " .. y0 .. " " .. z0)
 end)
 
 
@@ -260,8 +261,9 @@ minetest.register_abm({
 	nodenames = {"catacomb:chambern"},
 	interval = 16 * ABMINT,
 	chance = 1,
+	catch_up = false,
 	action = function(pos, node)
-		local t1 = os.clock()
+		--local t1 = os.clock()
 		local x = pos.x
 		local y = pos.y
 		local z = pos.z
@@ -344,7 +346,7 @@ minetest.register_abm({
 						vm:set_data(data) -- To remove spawner
 						vm:write_to_map()
 						vm:update_map()
-						print ("[catacomb] Chamber obstructed")
+						--print ("[catacomb] Chamber obstructed")
 						return
 					end
 					vi = vi + 1
@@ -369,21 +371,21 @@ minetest.register_abm({
 			for j = 1, 6 do
 				for i = 1, passwid do
 					local nodid = data[vi]
-					if nodid ~= c_ignore
-					and nodid ~= c_leaves
-					and nodid ~= c_jleaves
-					and nodid ~= c_apple then
+					if nodid ~= c_ignore then
 						if passdlu ~= 0 and j == 1 -- steps spawn in underground air
-						and not (passdlu == 1 and k == 1)
-						and not (passdlu == -1 and k == len)
-						and (i >= 2 and i <= passwid - 1)
-						and (nodid ~= c_air or y <= YMAXSPA) then
+								and not (passdlu == 1 and k == 1)
+								and not (passdlu == -1 and k == len)
+								and (i >= 2 and i <= passwid - 1)
+								and (nodid ~= c_air or y <= YMAXSPA) then
 							if passdlu == -1 then
 								data[vi] = c_stairs
+								data[vi - vvii] = c_catcobble
 							else
 								data[vi] = c_stairn
+								data[vi - vvii] = c_catcobble
 							end
-						elseif passdlu == 0 and j == 1 and (i >= 2 and i <= passwid - 1) then
+						elseif passdlu == 0 and j == 1 and
+								(i >= 2 and i <= passwid - 1) then
 							data[vi] = c_catcobble -- Level passage floor spawns in air
 						elseif nodid ~= c_air then
 							if j == 1 or j == 6 or i == 1 or i == passwid then
@@ -402,8 +404,9 @@ minetest.register_abm({
 
 		-- Decide whether to place spawners in chamber
 		local nobj_cata = minetest.get_perlin(np_cata)
-		local spawn = GEN and nobj_cata:get3d({x = x + chamhoff, y = y + chamvoff, z = z + vmvn}) > TCATA
-		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
+		local spawn = GEN and nobj_cata:get3d(
+			{x = x + chamhoff, y = y + chamvoff, z = z + vmvn}) > TCATA and
+			x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
 
 		-- Spawn chamber
 		for k = passlen + 1, vmvn do
@@ -412,25 +415,22 @@ minetest.register_abm({
 			for i = 0, chamew do
 				local nodid = data[vi]
 				if nodid ~= c_air
-				and nodid ~= c_ignore
-				and nodid ~= c_cobble -- Default dungeons remain TODO update for new dungeons, mgv5/7
-				and nodid ~= c_mobble
-				and nodid ~= c_stobble
-				and nodid ~= c_leaves
-				and nodid ~= c_jleaves
-				and nodid ~= c_apple then
+						and nodid ~= c_ignore
+						and nodid ~= c_cobble -- Default dungeons remain TODO update for new dungeons
+						and nodid ~= c_mobble
+						and nodid ~= c_stobble then
 					if spawn and k == vmvn and j == chamvoff and i == exoffn then
 						data[vi] = c_chambern
-					elseif spawn and i == chamew and j == chamvoff and k == passlen + 1 + exoffe then
+					elseif spawn and i == chamew and j == chamvoff and
+							k == passlen + 1 + exoffe then
 						data[vi] = c_chambere
-					elseif spawn and i == 0 and j == chamvoff and k == passlen + 1 + exoffw then
+					elseif spawn and i == 0 and j == chamvoff and
+							k == passlen + 1 + exoffw then
 						data[vi] = c_chamberw
-					elseif (k > passlen + 1 and k < vmvn
-					and j > chamvoff and j < chamvoff + chamhei
-					and i > 0 and i < chamew)
-					or (k == passlen + 1
-					and j > chamvoff and j <= chamvoff + 4
-					and (i > -chamhoff and i < -chamhoff + passwid - 1)) then
+					elseif (k > passlen + 1 and k < vmvn and j > chamvoff and
+							j < chamvoff + chamhei and i > 0 and i < chamew) or
+							(k == passlen + 1 and j > chamvoff and j <= chamvoff + 4 and
+							(i > -chamhoff and i < -chamhoff + passwid - 1)) then
 						data[vi] = c_air
 					else
 						data[vi] = c_catcobble
@@ -445,8 +445,8 @@ minetest.register_abm({
 		vm:write_to_map()
 		vm:update_map()
 
-		local chugent = math.ceil((os.clock() - t1) * 1000)
-		print ("[catacomb] Chamber north " .. chugent .. "ms")
+		--local chugent = math.ceil((os.clock() - t1) * 1000)
+		--print ("[catacomb] Chamber North " .. chugent .. "ms")
 	end,
 })
 
@@ -457,8 +457,9 @@ minetest.register_abm({
 	nodenames = {"catacomb:chambers"},
 	interval = 17 * ABMINT,
 	chance = 1,
+	catch_up = false,
 	action = function(pos, node)
-		local t1 = os.clock()
+		--local t1 = os.clock()
 		local x = pos.x
 		local y = pos.y
 		local z = pos.z
@@ -536,7 +537,7 @@ minetest.register_abm({
 						vm:set_data(data) -- abort chamber spawn
 						vm:write_to_map()
 						vm:update_map()
-						print ("[catacomb] Chamber obstructed")
+						--print ("[catacomb] Chamber obstructed")
 						return
 					end
 					vi = vi + 1
@@ -559,21 +560,21 @@ minetest.register_abm({
 			for j = 1, 6 do
 				for i = 1, passwid do
 					local nodid = data[vi]
-					if nodid ~= c_ignore
-					and nodid ~= c_leaves -- no spawning in leaves
-					and nodid ~= c_jleaves
-					and nodid ~= c_apple then
+					if nodid ~= c_ignore then
 						if passdlu ~= 0 and j == 1
-						and not (passdlu == 1 and k == 1)
-						and not (passdlu == -1 and k == len)
-						and (i >= 2 and i <= passwid - 1)
-						and (nodid ~= c_air or y <= YMAXSPA) then
+								and not (passdlu == 1 and k == 1)
+								and not (passdlu == -1 and k == len)
+								and (i >= 2 and i <= passwid - 1)
+								and (nodid ~= c_air or y <= YMAXSPA) then
 							if passdlu == -1 then
 								data[vi] = c_stairn
+								data[vi - vvii] = c_catcobble
 							else
 								data[vi] = c_stairs
+								data[vi - vvii] = c_catcobble
 							end
-						elseif passdlu == 0 and j == 1 and (i >= 2 and i <= passwid - 1) then
+						elseif passdlu == 0 and j == 1 and
+								(i >= 2 and i <= passwid - 1) then
 							data[vi] = c_catcobble
 						elseif nodid ~= c_air then
 							if j == 1 or j == 6 or i == 1 or i == passwid then
@@ -590,9 +591,11 @@ minetest.register_abm({
 			vi = vi + (passdlu - 6) * vvii - nvii -- down 5 or 6 or 7, southwards 1
 		end
 
+		-- Decide whether to place spawners in chamber
 		local nobj_cata = minetest.get_perlin(np_cata)
-		local spawn = GEN and nobj_cata:get3d({x = x + chamhoff, y = y + chamvoff, z = z - vmvs}) > TCATA -- whether to place spawners
-		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
+		local spawn = GEN and nobj_cata:get3d(
+			{x = x + chamhoff, y = y + chamvoff, z = z - vmvs}) > TCATA and
+			x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
 
 		for k = passlen + 1, vmvs do -- spawn chamber
 		for j = chamvoff, chamvoff + chamhei do
@@ -600,24 +603,22 @@ minetest.register_abm({
 			for i = 0, chamew do
 				local nodid = data[vi]
 				if nodid ~= c_air
-				and nodid ~= c_ignore
-				and nodid ~= c_cobble -- default dungeons remain
-				and nodid ~= c_mobble
-				and nodid ~= c_stobble
-				and nodid ~= c_leaves
-				and nodid ~= c_jleaves
-				and nodid ~= c_apple then
+						and nodid ~= c_ignore
+						and nodid ~= c_cobble -- default dungeons remain
+						and nodid ~= c_mobble
+						and nodid ~= c_stobble then
 					if spawn and k == vmvs and j == chamvoff and i == exoffs then
 						data[vi] = c_chambers
-					elseif spawn and i == chamew and j == chamvoff and k == passlen + 1 + exoffe then
+					elseif spawn and i == chamew and j == chamvoff and
+							k == passlen + 1 + exoffe then
 						data[vi] = c_chambere
-					elseif spawn and i == 0 and j == chamvoff and k == passlen + 1 + exoffw then
+					elseif spawn and i == 0 and j == chamvoff and
+							k == passlen + 1 + exoffw then
 						data[vi] = c_chamberw
-					elseif (k > passlen + 1 and k < vmvs
-					and j > chamvoff and j < chamvoff + chamhei
-					and i > 0 and i < chamew)
-					or (k == passlen + 1 and j > chamvoff and j <= chamvoff + 4
-					and (i > -chamhoff and i < -chamhoff + passwid - 1)) then
+					elseif (k > passlen + 1 and k < vmvs and j > chamvoff and
+							j < chamvoff + chamhei and i > 0 and i < chamew) or
+							(k == passlen + 1 and j > chamvoff and j <= chamvoff + 4 and
+							(i > -chamhoff and i < -chamhoff + passwid - 1)) then
 						data[vi] = c_air
 					else
 						data[vi] = c_catcobble
@@ -632,8 +633,8 @@ minetest.register_abm({
 		vm:write_to_map()
 		vm:update_map()
 
-		local chugent = math.ceil((os.clock() - t1) * 1000)
-		print ("[catacomb] Chamber south " .. chugent .. "ms")
+		--local chugent = math.ceil((os.clock() - t1) * 1000)
+		--print ("[catacomb] Chamber south " .. chugent .. "ms")
 	end,
 })
 
@@ -643,8 +644,9 @@ minetest.register_abm({
 	nodenames = {"catacomb:chambere"},
 	interval = 18 * ABMINT,
 	chance = 1,
+	catch_up = false,
 	action = function(pos, node)
-		local t1 = os.clock()
+		--local t1 = os.clock()
 		local x = pos.x
 		local y = pos.y
 		local z = pos.z
@@ -724,7 +726,7 @@ minetest.register_abm({
 						vm:set_data(data) -- abort chamber spawn
 						vm:write_to_map()
 						vm:update_map()
-						print ("[catacomb] Chamber obstructed")
+						--print ("[catacomb] Chamber obstructed")
 						return
 					end
 					vi = vi + 1
@@ -747,21 +749,21 @@ minetest.register_abm({
 			for j = 1, 6 do
 				for k = 1, passwid do
 					local nodid = data[vi]
-					if nodid ~= c_ignore
-					and nodid ~= c_leaves -- no spawning in leaves
-					and nodid ~= c_jleaves
-					and nodid ~= c_apple then
+					if nodid ~= c_ignore then
 						if passdlu ~= 0 and j == 1
-						and not (passdlu == 1 and i == 1)
-						and not (passdlu == -1 and i == len)
-						and (k >= 2 and k <= passwid - 1)
-						and (nodid ~= c_air or y <= YMAXSPA) then
+								and not (passdlu == 1 and i == 1)
+								and not (passdlu == -1 and i == len)
+								and (k >= 2 and k <= passwid - 1)
+								and (nodid ~= c_air or y <= YMAXSPA) then
 							if passdlu == -1 then
 								data[vi] = c_stairw
+								data[vi - vvii] = c_catcobble
 							else
 								data[vi] = c_staire
+								data[vi - vvii] = c_catcobble
 							end
-						elseif passdlu == 0 and j == 1 and (k >= 2 and k <= passwid - 1) then
+						elseif passdlu == 0 and j == 1 and
+								(k >= 2 and k <= passwid - 1) then
 							data[vi] = c_catcobble
 						elseif nodid ~= c_air then
 							if j == 1 or j == 6 or k == 1 or k == passwid then
@@ -778,9 +780,11 @@ minetest.register_abm({
 			vi = vi + (passdlu - 6) * vvii + 1 -- down 5 or 6 or 7, eastwards 1
 		end
 
+		-- Decide whether to place spawners in chamber
 		local nobj_cata = minetest.get_perlin(np_cata)
-		local spawn = GEN and nobj_cata:get3d({x = x + vmve, y = y + chamvoff, z = z + chamhoff}) > TCATA -- whether to place spawners
-		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
+		local spawn = GEN and nobj_cata:get3d(
+			{x = x + vmve, y = y + chamvoff, z = z + chamhoff}) > TCATA and
+			x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
 
 		for k = chamhoff, vmvn do -- spawn chamber
 		for j = chamvoff, chamvoff + chamhei do
@@ -788,24 +792,21 @@ minetest.register_abm({
 			for i = 0, chamew do
 				local nodid = data[vi]
 				if nodid ~= c_air
-				and nodid ~= c_ignore
-				and nodid ~= c_cobble -- default dungeons remain
-				and nodid ~= c_mobble
-				and nodid ~= c_stobble
-				and nodid ~= c_leaves
-				and nodid ~= c_jleaves
-				and nodid ~= c_apple then
-					if spawn and k == chamhoff + exoffe and j == chamvoff and i == chamew then
+						and nodid ~= c_ignore
+						and nodid ~= c_cobble -- default dungeons remain
+						and nodid ~= c_mobble
+						and nodid ~= c_stobble then
+					if spawn and k == chamhoff + exoffe and
+							j == chamvoff and i == chamew then
 						data[vi] = c_chambere
 					elseif spawn and i == exoffn and j == chamvoff and k == vmvn then
 						data[vi] = c_chambern
 					elseif spawn and i == exoffs and j == chamvoff and k == chamhoff then
 						data[vi] = c_chambers
-					elseif (k > chamhoff and k < vmvn
-					and j > chamvoff and j < chamvoff + chamhei
-					and i > 0 and i < chamew)
-					or (i == 0 and j > chamvoff and j <= chamvoff + 4
-					and (k > 0 and k < passwid - 1)) then
+					elseif (k > chamhoff and k < vmvn and j > chamvoff and
+							j < chamvoff + chamhei and i > 0 and i < chamew) or
+							(i == 0 and j > chamvoff and j <= chamvoff + 4 and
+							(k > 0 and k < passwid - 1)) then
 						data[vi] = c_air
 					else
 						data[vi] = c_catcobble
@@ -820,8 +821,8 @@ minetest.register_abm({
 		vm:write_to_map()
 		vm:update_map()
 
-		local chugent = math.ceil((os.clock() - t1) * 1000)
-		print ("[catacomb] Chamber east " .. chugent .. "ms")
+		--local chugent = math.ceil((os.clock() - t1) * 1000)
+		--print ("[catacomb] Chamber east " .. chugent .. "ms")
 	end,
 })
 
@@ -831,8 +832,9 @@ minetest.register_abm({
 	nodenames = {"catacomb:chamberw"},
 	interval = 19 * ABMINT,
 	chance = 1,
+	catch_up = false,
 	action = function(pos, node)
-		local t1 = os.clock()
+		--local t1 = os.clock()
 		local x = pos.x
 		local y = pos.y
 		local z = pos.z
@@ -912,7 +914,7 @@ minetest.register_abm({
 						vm:set_data(data) -- abort chamber spawn
 						vm:write_to_map()
 						vm:update_map()
-						print ("[catacomb] Chamber obstructed")
+						--print ("[catacomb] Chamber obstructed")
 						return
 					end
 					vi = vi + 1
@@ -935,21 +937,21 @@ minetest.register_abm({
 			for j = 1, 6 do
 				for k = 1, passwid do
 					local nodid = data[vi]
-					if nodid ~= c_ignore
-					and nodid ~= c_leaves -- no spawning in leaves
-					and nodid ~= c_jleaves
-					and nodid ~= c_apple then
+					if nodid ~= c_ignore then
 						if passdlu ~= 0 and j == 1
-						and not (passdlu == 1 and i == 1)
-						and not (passdlu == -1 and i == len)
-						and (k >= 2 and k <= passwid - 1)
-						and (nodid ~= c_air or y <= YMAXSPA) then
+								and not (passdlu == 1 and i == 1)
+								and not (passdlu == -1 and i == len)
+								and (k >= 2 and k <= passwid - 1)
+								and (nodid ~= c_air or y <= YMAXSPA) then
 							if passdlu == -1 then
 								data[vi] = c_staire
+								data[vi - vvii] = c_catcobble
 							else
 								data[vi] = c_stairw
+								data[vi - vvii] = c_catcobble
 							end
-						elseif passdlu == 0 and j == 1 and (k >= 2 and k <= passwid - 1) then
+						elseif passdlu == 0 and j == 1 and
+								(k >= 2 and k <= passwid - 1) then
 							data[vi] = c_catcobble
 						elseif nodid ~= c_air then
 							if j == 1 or j == 6 or k == 1 or k == passwid then
@@ -966,9 +968,11 @@ minetest.register_abm({
 			vi = vi + (passdlu - 6) * vvii - 1 -- down 5 or 6 or 7, westwards 1
 		end
 
+		-- Decide whether to place spawners in chamber
 		local nobj_cata = minetest.get_perlin(np_cata)
-		local spawn = GEN and nobj_cata:get3d({x = x - vmvw, y = y + chamvoff, z = z + chamhoff}) > TCATA -- whether to place spawners
-		and x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
+		local spawn = GEN and nobj_cata:get3d(
+			{x = x - vmvw, y = y + chamvoff, z = z + chamhoff}) > TCATA and
+			x > XMIN and x < XMAX and y > YMIN and y < YMAX and z > ZMIN and z < ZMAX
 
 		for k = chamhoff, vmvn do -- spawn chamber
 		for j = chamvoff, chamvoff + chamhei do
@@ -976,24 +980,20 @@ minetest.register_abm({
 			for i = 0, chamew - 1 do
 				local nodid = data[vi]
 				if nodid ~= c_air
-				and nodid ~= c_ignore
-				and nodid ~= c_cobble -- default dungeons remain
-				and nodid ~= c_mobble
-				and nodid ~= c_stobble
-				and nodid ~= c_leaves
-				and nodid ~= c_jleaves
-				and nodid ~= c_apple then
+						and nodid ~= c_ignore
+						and nodid ~= c_cobble -- default dungeons remain
+						and nodid ~= c_mobble
+						and nodid ~= c_stobble then
 					if spawn and k == chamhoff + exoffw and j == chamvoff and i == 0 then
 						data[vi] = c_chamberw
 					elseif spawn and i == exoffn and j == chamvoff and k == vmvn then
 						data[vi] = c_chambern
 					elseif spawn and i == exoffs and j == chamvoff and k == chamhoff then
 						data[vi] = c_chambers
-					elseif (k > chamhoff and k < vmvn
-					and j > chamvoff and j < chamvoff + chamhei
-					and i > 0 and i < chamew - 1)
-					or (i == chamew - 1 and j > chamvoff and j <= chamvoff + 4
-					and (k > 0 and k < passwid - 1)) then
+					elseif (k > chamhoff and k < vmvn and j > chamvoff and
+							j < chamvoff + chamhei and i > 0 and i < chamew - 1) or
+							(i == chamew - 1 and j > chamvoff and j <= chamvoff + 4 and
+							(k > 0 and k < passwid - 1)) then
 						data[vi] = c_air
 					else
 						data[vi] = c_catcobble
@@ -1008,7 +1008,7 @@ minetest.register_abm({
 		vm:write_to_map()
 		vm:update_map()
 
-		local chugent = math.ceil((os.clock() - t1) * 1000)
-		print ("[catacomb] Chamber west " .. chugent .. "ms")
+		--local chugent = math.ceil((os.clock() - t1) * 1000)
+		--print ("[catacomb] Chamber west " .. chugent .. "ms")
 	end,
 })

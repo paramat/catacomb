@@ -1,9 +1,9 @@
-catacomb 0.4.1 by paramat
-For Minetest 0.4.8 and later
+catacomb 0.4.2 by paramat
+For Minetest 0.4.14 and later
 Depends: default
 Licenses: Source code MIT
 
-V0.4.1 is for testing.
+V0.4.2 is for testing.
 
 To start generating the dungeon place one of the 4 'chamber spawner' nodes
 underground and wait nearby for a minute.
